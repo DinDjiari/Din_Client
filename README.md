@@ -64,5 +64,3 @@ src/main/java/gg/dindijari/client/
 ## License
 
 GPL-3.0-only. See [`LICENSE`](LICENSE).
-# Din_Client
-My own MC client 
