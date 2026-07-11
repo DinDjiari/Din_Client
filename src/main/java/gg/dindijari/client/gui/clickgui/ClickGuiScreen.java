@@ -2,6 +2,7 @@ package gg.dindijari.client.gui.clickgui;
 
 import gg.dindijari.client.core.Services;
 import gg.dindijari.client.gui.screen.ThemedScreen;
+import gg.dindijari.client.gui.widget.ScrollPanel;
 import gg.dindijari.client.gui.widget.ThemedTextField;
 import gg.dindijari.client.module.Category;
 import gg.dindijari.client.module.Module;
@@ -29,11 +30,11 @@ import java.util.Map;
  *
  * <p>Layout (client design tokens throughout): a top bar with the wordmark, the
  * section tabs and a close button; a filter row of category chips plus a search
- * field and a favorites toggle; and a responsive, scrollable grid of module
- * cards (up to four per row, wrapping). Each card shows the module name, a
- * favorite star, a large category glyph, a gear that opens the module's
- * settings overlay and a wide status button that toggles it. Cards lighten and
- * scale slightly on hover.
+ * field and a favorites toggle; and a responsive, scrollable {@link ScrollPanel}
+ * grid of module cards (up to four per row). Each card shows the module name
+ * (ellipsised with a hover tooltip if it does not fit), a favorite star, a
+ * large category glyph, a gear that opens the module's settings overlay and a
+ * wide status button that toggles it. Cards lighten and scale slightly on hover.
  */
 public final class ClickGuiScreen extends ThemedScreen {
 
@@ -52,15 +53,20 @@ public final class ClickGuiScreen extends ThemedScreen {
     private final Screen parent;
     private final Component wordmark = Fonts.display("DINDIJARI");
     private final Map<Module, Animation> hover = new IdentityHashMap<>();
+    private final ScrollPanel gridScroll = new ScrollPanel();
 
     private Tab tab = Tab.MODULES;
     private Category chip; // null = "All"
     private boolean favoritesOnly;
     private String search = "";
-    private float scroll;
 
     private ThemedTextField searchField;
     private ModuleSettingsView settingsView;
+
+    // Deferred tooltip drawn after the grid (truncated card name under cursor).
+    private Component pendingTooltip;
+    private int tooltipX;
+    private int tooltipY;
 
     /**
      * Creates the Click GUI.
@@ -79,7 +85,7 @@ public final class ClickGuiScreen extends ThemedScreen {
                 Math.round(this.width - Theme.px(24) - sw), Math.round(topBarH() + Theme.px(8)),
                 sw, Math.round(Theme.px(24)), "Search modules...", q -> {
             search = q.toLowerCase(Locale.ROOT);
-            scroll = 0;
+            gridScroll.reset();
         });
         addRenderableWidget(searchField);
     }
@@ -104,8 +110,21 @@ public final class ClickGuiScreen extends ThemedScreen {
         return this.height - Theme.px(16);
     }
 
+    private float gridX() {
+        return Theme.px(24);
+    }
+
+    private float gridW() {
+        return this.width - 2 * gridX();
+    }
+
+    /** Card area excludes a gutter for the scrollbar. */
+    private float cardsW() {
+        return gridW() - Theme.px(12);
+    }
+
     private int columns() {
-        int c = (int) ((this.width - Theme.px(24)) / Theme.px(180));
+        int c = (int) (cardsW() / Theme.px(170));
         return Math.max(2, Math.min(4, c));
     }
 
@@ -114,9 +133,8 @@ public final class ClickGuiScreen extends ThemedScreen {
     }
 
     private float cardWidth() {
-        float area = this.width - 2 * Theme.px(24);
         int cols = columns();
-        return (area - (cols - 1) * cardGap()) / cols;
+        return (cardsW() - (cols - 1) * cardGap()) / cols;
     }
 
     private float cardHeight() {
@@ -157,17 +175,22 @@ public final class ClickGuiScreen extends ThemedScreen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        pendingTooltip = null;
         super.render(g, mouseX, mouseY, partialTick);
 
         renderTopBar(g, mouseX, mouseY);
-        boolean gridTab = tab == Tab.MODULES || tab == Tab.HUD || tab == Tab.THEME;
-        searchField.visible = gridTab;
+        boolean gridTab = tab == Tab.MODULES || tab == Tab.THEME;
+        searchField.visible = gridTab && settingsView == null;
 
         if (gridTab) {
             renderChipRow(g, mouseX, mouseY);
             renderGrid(g, mouseX, mouseY);
         } else {
             renderPlaceholder(g);
+        }
+
+        if (pendingTooltip != null && settingsView == null) {
+            drawTooltip(g, pendingTooltip, tooltipX, tooltipY);
         }
 
         if (settingsView != null) {
@@ -186,7 +209,7 @@ public final class ClickGuiScreen extends ThemedScreen {
         for (Tab t : Tab.values()) {
             Component label = Fonts.ui(t.label);
             float w = Fonts.width(label) + Theme.px(16);
-            boolean active = t == tab;
+            boolean active = t == tab || (t == Tab.HUD && tab == Tab.MODULES && chip == Category.HUD);
             boolean hovered = mouseX >= tx && mouseX <= tx + w && mouseY <= topBarH();
             if (active) {
                 Render2D.fillRounded(g, tx, Theme.px(10), w, Theme.px(24), Theme.px(6),
@@ -204,7 +227,7 @@ public final class ClickGuiScreen extends ThemedScreen {
 
     private void renderChipRow(GuiGraphics g, int mouseX, int mouseY) {
         float y = topBarH() + Theme.px(8);
-        float x = Theme.px(24);
+        float x = gridX();
         x = chip(g, "All", chip == null, x, y, mouseX, mouseY);
         for (Category c : Category.values()) {
             x = chip(g, c.getDisplayName(), chip == c, x, y, mouseX, mouseY);
@@ -221,8 +244,9 @@ public final class ClickGuiScreen extends ThemedScreen {
                        int mouseX, int mouseY) {
         Component c = Fonts.ui(label);
         float w = Fonts.width(c) * 0.9F + Theme.px(16);
-        boolean hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + Theme.px(24);
-        int fill = active ? Theme.accent() : (hovered ? Theme.BUTTON_HOVER : Theme.BUTTON);
+        int fill = active ? Theme.accent()
+                : (mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + Theme.px(24)
+                        ? Theme.BUTTON_HOVER : Theme.BUTTON);
         Render2D.fillRounded(g, x, y, w, Theme.px(24), Theme.px(6), fill);
         Fonts.drawScaled(g, c, x + Theme.px(8), y + Theme.px(8), 0.9F,
                 active ? 0xFF0E0E10 : Theme.TEXT_PRIMARY, false);
@@ -235,25 +259,25 @@ public final class ClickGuiScreen extends ThemedScreen {
         float cw = cardWidth();
         float ch = cardHeight();
         float gap = cardGap();
-        float x0 = Theme.px(24);
+        float x0 = gridX();
         float top = gridTop();
-        float bottom = gridBottom();
+        float h = gridBottom() - top;
+        int rows = (modules.size() + cols - 1) / cols;
+        float contentH = rows * (ch + gap);
 
-        clampScroll(modules.size());
-
-        g.enableScissor((int) x0 - 2, (int) top - 2, (int) (this.width - Theme.px(22)), (int) bottom + 2);
+        float originY = gridScroll.begin(g, x0, top, gridW(), h, contentH);
         for (int i = 0; i < modules.size(); i++) {
             float cardX = x0 + (i % cols) * (cw + gap);
-            float cardY = top - scroll + (i / cols) * (ch + gap);
-            if (cardY + ch >= top && cardY <= bottom) {
+            float cardY = originY + (i / cols) * (ch + gap);
+            if (cardY + ch >= top && cardY <= top + h) {
                 renderCard(g, modules.get(i), cardX, cardY, cw, ch, mouseX, mouseY);
             }
         }
-        g.disableScissor();
+        gridScroll.end(g);
 
         if (modules.isEmpty()) {
             Fonts.drawCentered(g, Fonts.ui("No modules match your filter"), this.width / 2.0F,
-                    (top + bottom) / 2, 1.0F, Theme.TEXT_SECONDARY, false);
+                    top + h / 2, 1.0F, Theme.TEXT_SECONDARY, false);
         }
     }
 
@@ -278,7 +302,15 @@ public final class ClickGuiScreen extends ThemedScreen {
                     ColorUtil.scaleAlpha(Theme.accent(), 0.5F * t));
         }
 
-        Fonts.draw(g, Fonts.ui(m.getName()), x + Theme.px(10), y + Theme.px(9),
+        // Name (ellipsised) + favorite star; tooltip if truncated.
+        Component name = Fonts.ui(m.getName());
+        float nameMax = w - Theme.px(30);
+        if (hovered && !Fonts.fits(name, nameMax, 1.0F)) {
+            pendingTooltip = name;
+            tooltipX = mouseX;
+            tooltipY = mouseY;
+        }
+        Fonts.draw(g, Fonts.fit(name, nameMax, 1.0F), x + Theme.px(10), y + Theme.px(9),
                 Theme.TEXT_PRIMARY, false);
         Icons.star(g, x + w - Theme.px(12), y + Theme.px(13), Theme.px(12),
                 m.isFavorite() ? Theme.accent() : Theme.TEXT_SECONDARY, m.isFavorite());
@@ -295,17 +327,14 @@ public final class ClickGuiScreen extends ThemedScreen {
 
         float btnX = x + Theme.px(34);
         float btnW = w - Theme.px(42);
-        if (m.isToggleable()) {
-            boolean on = m.isEnabled();
-            Render2D.fillRounded(g, btnX, rowY, btnW, Theme.px(20), Theme.px(6),
-                    on ? Theme.accent() : Theme.BUTTON);
-            Fonts.drawCentered(g, Fonts.ui(on ? "Enabled" : "Disabled"), btnX + btnW / 2,
-                    rowY + Theme.px(6), 0.85F, on ? 0xFF0E0E10 : Theme.TEXT_SECONDARY, false);
-        } else {
-            Render2D.fillRounded(g, btnX, rowY, btnW, Theme.px(20), Theme.px(6), Theme.BUTTON);
-            Fonts.drawCentered(g, Fonts.ui("Configure"), btnX + btnW / 2, rowY + Theme.px(6),
-                    0.85F, Theme.TEXT_SECONDARY, false);
-        }
+        boolean toggle = m.isToggleable();
+        boolean on = toggle && m.isEnabled();
+        String status = toggle ? (on ? "Enabled" : "Disabled") : "Configure";
+        Render2D.fillRounded(g, btnX, rowY, btnW, Theme.px(20), Theme.px(6),
+                on ? Theme.accent() : Theme.BUTTON);
+        Fonts.drawCentered(g, Fonts.fit(Fonts.ui(status), btnW - Theme.px(6), 0.85F),
+                btnX + btnW / 2, rowY + Theme.px(6), 0.85F,
+                on ? 0xFF0E0E10 : Theme.TEXT_SECONDARY, false);
 
         g.pose().popPose();
     }
@@ -321,12 +350,13 @@ public final class ClickGuiScreen extends ThemedScreen {
                 Theme.TEXT_SECONDARY, false);
     }
 
-    private void clampScroll(int count) {
-        int cols = columns();
-        int rows = (count + cols - 1) / cols;
-        float content = rows * (cardHeight() + cardGap());
-        float max = Math.max(0, content - (gridBottom() - gridTop()));
-        scroll = Math.max(0, Math.min(scroll, max));
+    private void drawTooltip(GuiGraphics g, Component text, int mx, int my) {
+        float w = Fonts.width(text) + Theme.px(12);
+        float x = Math.min(mx + Theme.px(10), this.width - w - Theme.px(4));
+        float y = Math.max(my - Theme.px(4), Theme.px(2));
+        Render2D.dropShadow(g, x, y, w, Theme.px(18), Theme.px(4), Theme.px(6), Theme.SHADOW);
+        Render2D.fillRounded(g, x, y, w, Theme.px(18), Theme.px(4), Theme.BUTTON_HOVER);
+        Fonts.draw(g, text, x + Theme.px(6), y + Theme.px(5), Theme.TEXT_PRIMARY, false);
     }
 
     // ------------------------------------------------------------------
@@ -358,8 +388,11 @@ public final class ClickGuiScreen extends ThemedScreen {
                         chip = Category.HUD;
                     } else {
                         tab = t;
+                        if (t == Tab.MODULES) {
+                            chip = null;
+                        }
                     }
-                    scroll = 0;
+                    gridScroll.reset();
                     setFocused(null);
                     return true;
                 }
@@ -367,11 +400,11 @@ public final class ClickGuiScreen extends ThemedScreen {
             }
         }
 
-        boolean gridTab = tab == Tab.MODULES || tab == Tab.HUD || tab == Tab.THEME;
+        boolean gridTab = tab == Tab.MODULES || tab == Tab.THEME;
         if (gridTab && my >= topBarH() && my <= topBarH() + chipRowH() && handleChipClick(mx, my)) {
             return true;
         }
-        if (gridTab && my >= gridTop() && handleGridClick(mx, my, button)) {
+        if (gridTab && my >= gridTop() && my <= gridBottom() && handleGridClick(mx, my, button)) {
             return true;
         }
         return super.mouseClicked(mx, my, button);
@@ -379,11 +412,11 @@ public final class ClickGuiScreen extends ThemedScreen {
 
     private boolean handleChipClick(double mx, double my) {
         float y = topBarH() + Theme.px(8);
-        float x = Theme.px(24);
+        float x = gridX();
         float allW = Fonts.width(Fonts.ui("All")) * 0.9F + Theme.px(16);
         if (mx >= x && mx <= x + allW && my >= y && my <= y + Theme.px(24)) {
             chip = null;
-            scroll = 0;
+            gridScroll.reset();
             return true;
         }
         x += allW + Theme.px(6);
@@ -391,7 +424,7 @@ public final class ClickGuiScreen extends ThemedScreen {
             float w = Fonts.width(Fonts.ui(c.getDisplayName())) * 0.9F + Theme.px(16);
             if (mx >= x && mx <= x + w && my >= y && my <= y + Theme.px(24)) {
                 chip = c;
-                scroll = 0;
+                gridScroll.reset();
                 return true;
             }
             x += w + Theme.px(6);
@@ -399,7 +432,7 @@ public final class ClickGuiScreen extends ThemedScreen {
         float favX = this.width - Theme.px(24) - Theme.px(200) - Theme.px(30);
         if (mx >= favX && mx <= favX + Theme.px(24) && my >= y && my <= y + Theme.px(24)) {
             favoritesOnly = !favoritesOnly;
-            scroll = 0;
+            gridScroll.reset();
             return true;
         }
         return false;
@@ -411,13 +444,13 @@ public final class ClickGuiScreen extends ThemedScreen {
         float cw = cardWidth();
         float ch = cardHeight();
         float gap = cardGap();
-        float x0 = Theme.px(24);
+        float x0 = gridX();
         float top = gridTop();
+        float originY = top - gridScroll.scroll();
         for (int i = 0; i < modules.size(); i++) {
             float cardX = x0 + (i % cols) * (cw + gap);
-            float cardY = top - scroll + (i / cols) * (ch + gap);
-            if (mx < cardX || mx > cardX + cw || my < cardY || my > cardY + ch
-                    || my > gridBottom()) {
+            float cardY = originY + (i / cols) * (ch + gap);
+            if (mx < cardX || mx > cardX + cw || my < cardY || my > cardY + ch) {
                 continue;
             }
             Module m = modules.get(i);
@@ -443,18 +476,13 @@ public final class ClickGuiScreen extends ThemedScreen {
     }
 
     private void openSettings(Module m) {
-        closeSettings();
-        settingsView = new ModuleSettingsView(m, this::addRenderableWidget);
+        settingsView = new ModuleSettingsView(m);
+        searchField.visible = false;
         setFocused(null);
     }
 
     private void closeSettings() {
-        if (settingsView != null) {
-            for (ThemedTextField field : settingsView.textFields()) {
-                removeWidget(field);
-            }
-            settingsView = null;
-        }
+        settingsView = null;
     }
 
     @Override
@@ -475,23 +503,34 @@ public final class ClickGuiScreen extends ThemedScreen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
-        if (settingsView == null && my >= gridTop()) {
-            scroll -= (float) dy * Theme.px(28);
+        if (settingsView != null) {
+            return settingsView.mouseScrolled(mx, my, dy);
+        }
+        if (gridScroll.mouseScrolled(mx, my, dy)) {
             return true;
         }
         return super.mouseScrolled(mx, my, dx, dy);
     }
 
     @Override
+    public boolean charTyped(char c, int modifiers) {
+        if (settingsView != null) {
+            return settingsView.charTyped(c, modifiers);
+        }
+        return super.charTyped(c, modifiers);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (settingsView != null) {
-            if (settingsView.isListening()) {
-                return settingsView.keyPressed(keyCode);
+            if (settingsView.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
             }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 closeSettings();
                 return true;
             }
+            return true;
         }
         if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT && !(getFocused() instanceof ThemedTextField)) {
             onClose();
