@@ -1,2 +1,2 @@
-# Din_Client-
+# Din_Client
 My own MC client 
