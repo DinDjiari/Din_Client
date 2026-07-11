@@ -1,8 +1,11 @@
 package gg.dindijari.client.core;
 
 import gg.dindijari.client.config.ConfigManager;
+import gg.dindijari.client.gui.ScreenManager;
 import gg.dindijari.client.module.ModuleManager;
 import gg.dindijari.client.module.modules.SprintModule;
+import gg.dindijari.client.module.modules.ThemeModule;
+import gg.dindijari.client.render.Theme;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -38,6 +41,9 @@ public final class DindijariClient {
     /** The human readable mod name. */
     public static final String MOD_NAME = "Dindijari Client";
 
+    /** The mod version shown in UI footers; kept in sync with gradle.properties. */
+    public static final String MOD_VERSION = "0.1.0";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
     /**
@@ -52,6 +58,9 @@ public final class DindijariClient {
 
         ModuleManager moduleManager = new ModuleManager();
         moduleManager.register(new SprintModule());
+        ThemeModule themeModule = new ThemeModule();
+        moduleManager.register(themeModule);
+        Theme.install(themeModule);
 
         Path configRoot = FMLPaths.CONFIGDIR.get().resolve(MOD_ID);
         ConfigManager configManager = new ConfigManager(configRoot);
@@ -59,6 +68,7 @@ public final class DindijariClient {
         configManager.load();
 
         moduleManager.registerEvents();
+        new ScreenManager().registerEvents();
         Services.install(moduleManager, configManager);
 
         Runtime.getRuntime().addShutdownHook(
