@@ -242,6 +242,7 @@ public final class ConfigManager {
         for (Module module : modules) {
             JsonObject moduleJson = new JsonObject();
             moduleJson.addProperty("enabled", module.isEnabled());
+            moduleJson.addProperty("favorite", module.isFavorite());
             JsonObject settingsJson = new JsonObject();
             for (Setting<?> setting : module.getSettings()) {
                 settingsJson.add(setting.getName(), setting.save());
@@ -273,6 +274,9 @@ public final class ConfigManager {
             }
             if (moduleJson.has("enabled")) {
                 module.setEnabled(moduleJson.get("enabled").getAsBoolean());
+            }
+            if (moduleJson.has("favorite")) {
+                module.setFavorite(moduleJson.get("favorite").getAsBoolean());
             }
         }
     }
