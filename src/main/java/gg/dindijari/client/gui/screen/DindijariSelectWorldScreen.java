@@ -8,7 +8,6 @@ import gg.dindijari.client.render.Render2D;
 import gg.dindijari.client.render.Theme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.LevelStorageException;
 import net.minecraft.world.level.storage.LevelSummary;
@@ -85,7 +84,8 @@ public final class DindijariSelectWorldScreen extends ThemedScreen {
         addRenderableWidget(playButton);
         bx += Math.round(Theme.px(150)) + Math.round(Theme.px(Theme.GRID));
         addRenderableWidget(new ThemedButton(bx, by, Math.round(Theme.px(170)), bh,
-                "Create New World", () -> CreateWorldScreen.openFresh(this.minecraft, this)));
+                "Create New World",
+                () -> this.minecraft.setScreen(new DindijariCreateWorldScreen(this))));
         bx += Math.round(Theme.px(170)) + Math.round(Theme.px(Theme.GRID));
         addRenderableWidget(new ThemedButton(bx, by, Math.round(Theme.px(100)), bh,
                 "Back", this::onClose));

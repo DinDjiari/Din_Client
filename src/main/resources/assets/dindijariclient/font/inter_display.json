@@ -3,8 +3,8 @@
     {
       "type": "ttf",
       "file": "dindijariclient:inter-regular.ttf",
-      "size": 10.0,
-      "oversample": 6.0
+      "size": 30.0,
+      "oversample": 4.0
     }
   ]
 }

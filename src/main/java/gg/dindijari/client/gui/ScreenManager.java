@@ -1,15 +1,28 @@
 package gg.dindijari.client.gui;
 
 import gg.dindijari.client.gui.clickgui.ClickGuiScreen;
+import gg.dindijari.client.gui.screen.DindijariCreateWorldScreen;
 import gg.dindijari.client.gui.screen.DindijariJoinMultiplayerScreen;
 import gg.dindijari.client.gui.screen.DindijariPauseScreen;
 import gg.dindijari.client.gui.screen.DindijariSelectWorldScreen;
 import gg.dindijari.client.gui.screen.DindijariTitleScreen;
 import gg.dindijari.client.gui.screen.RenderDebugScreen;
+import gg.dindijari.client.gui.screen.loading.BrandedLevelLoadingScreen;
+import gg.dindijari.client.gui.screen.loading.BrandedMessageScreen;
+import gg.dindijari.client.gui.screen.loading.BrandedReceivingLevelScreen;
+import gg.dindijari.client.render.Fonts;
+import gg.dindijari.client.render.Render2D;
+import gg.dindijari.client.render.Theme;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.GenericMessageScreen;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.gui.screens.ProgressScreen;
+import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -38,6 +51,7 @@ import org.slf4j.LoggerFactory;
 public final class ScreenManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("dindijariclient/screens");
+    private static final net.minecraft.network.chat.Component WORDMARK = Fonts.display("DINDIJARI");
 
     /** Set once the dev auto-open has fired so it happens once per launch. */
     private boolean devSettingsShown;
@@ -51,6 +65,7 @@ public final class ScreenManager {
      */
     public void registerEvents() {
         NeoForge.EVENT_BUS.addListener(this::onScreenOpening);
+        NeoForge.EVENT_BUS.addListener(this::onBackgroundRendered);
         NeoForge.EVENT_BUS.addListener(this::onKey);
         NeoForge.EVENT_BUS.addListener(this::onClientTick);
         LOGGER.info("Screen manager initialized (dev auto-open: {})", !FMLLoader.isProduction());
@@ -77,6 +92,40 @@ public final class ScreenManager {
             event.setNewScreen(new DindijariSelectWorldScreen(new DindijariTitleScreen()));
         } else if (next.getClass() == JoinMultiplayerScreen.class) {
             event.setNewScreen(new DindijariJoinMultiplayerScreen(new DindijariTitleScreen()));
+        } else if (next.getClass() == CreateWorldScreen.class) {
+            event.setNewScreen(new DindijariCreateWorldScreen(
+                    new DindijariSelectWorldScreen(new DindijariTitleScreen())));
+        } else if (next.getClass() == LevelLoadingScreen.class) {
+            // The vanilla screen's progress listener is exposed via access
+            // transformer; the branded version inherits all its behaviour.
+            event.setNewScreen(new BrandedLevelLoadingScreen(
+                    ((LevelLoadingScreen) next).progressListener));
+        } else if (next.getClass() == ReceivingLevelScreen.class) {
+            ReceivingLevelScreen receiving = (ReceivingLevelScreen) next;
+            // Only the login case ("Loading terrain"); Nether/End portal
+            // transitions keep the vanilla portal visuals.
+            if (receiving.reason == ReceivingLevelScreen.Reason.OTHER) {
+                event.setNewScreen(new BrandedReceivingLevelScreen(
+                        receiving.levelReceived, receiving.reason));
+            }
+        } else if (next.getClass() == GenericMessageScreen.class) {
+            event.setNewScreen(new BrandedMessageScreen(next.getTitle()));
+        }
+    }
+
+    /**
+     * Brands the backdrop of transition screens that cannot be safely replaced
+     * (they own live state such as the server connection): a charcoal fill and
+     * the wordmark are painted after the vanilla background, and the vanilla
+     * text/widgets render on top.
+     */
+    private void onBackgroundRendered(ScreenEvent.BackgroundRendered event) {
+        var screen = event.getScreen();
+        if (screen instanceof ConnectScreen || screen instanceof ProgressScreen) {
+            var g = event.getGuiGraphics();
+            Render2D.fillRect(g, 0, 0, screen.width, screen.height, Theme.BACKGROUND);
+            Fonts.drawCentered(g, WORDMARK, screen.width / 2.0F,
+                    screen.height / 2.0F - Theme.px(72), 1.0F, Theme.TEXT_PRIMARY, false);
         }
     }
 

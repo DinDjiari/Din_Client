@@ -48,11 +48,53 @@ Theme Editor's "Blur Intensity" slider reads and writes. Setting it to 0
 disables blur entirely (the darkened overlay remains), which doubles as the
 spec's darkened fallback. Verified working under Mesa/llvmpipe software GL.
 
+### Loading/transition screens
+
+- **Replaced** (via `ScreenEvent.Opening` swaps; two private fields exposed
+  through a NeoForge access transformer, the supported mechanism):
+  world generation progress (`LevelLoadingScreen`), "Loading terrain"
+  (`ReceivingLevelScreen`, login case only) and every `GenericMessageScreen`
+  interstitial ("Saving world", "Reading world data...", etc.).
+- **Nether/End portal transitions** keep the vanilla portal visuals on
+  purpose — they are in-world effects, not menus.
+- **`ConnectScreen` ("Connecting to server...") cannot be safely replaced**:
+  the screen object owns the live connection handshake (vanilla code calls
+  back into the exact instance), so swapping it would break joining servers.
+  Supported fallback: its backdrop is branded via
+  `ScreenEvent.BackgroundRendered` (charcoal fill + wordmark); the vanilla
+  status text and Cancel button render on top. Same treatment for
+  `ProgressScreen`.
+- The **early loading window** (before the title screen, while mods load) is
+  drawn by NeoForge's early-display module outside the Screen system; theming
+  it is out of scope for a Screen-level mod and it is not replaced.
+
+### Create New World scope
+
+The themed create-world screen exposes name, game mode (Survival / Creative /
+Hardcore), difficulty, seed, Generate Structures and Bonus Chest, and creates
+worlds through the vanilla `WorldOpenFlows.createFreshLevel` pipeline with the
+normal world preset. Vanilla's deeper options (world-type presets like
+Superflat, gamerule editor, experiments, data-pack selection) are intentionally
+not in the design reference and are not exposed; they may return in a later
+phase behind the Advanced section.
+
+### Texture and 4K policy
+
+The client ships **no raster UI textures at all**: every shape is generated
+geometry (vertex colours) and every piece of text — including the DINDIJARI
+wordmark — is live TTF text, never baked into an image. Body fonts are
+rasterised at 6x oversample (60 px glyphs for 10-unit text ⇒ at or above
+physical size up to GUI scale 4 / 4K) and the wordmark uses a dedicated
+display-size Inter face (30 units at 4x = 120 px rasters) drawn at scale 1.
+All layout is computed in float GUI units from the design tokens, so panels
+and text stay sharp and aligned at any window size and GUI scale 1–4. With no
+shipped textures there is nothing to mipmap or size-check.
+
 ### Design-reference deviations (intentional)
 
-- **Vanilla sub-screens**: Options, Create New World, Edit Server info,
-  Direct Connect and the Mods list are still the vanilla screens; the design
-  reference does not cover them. They are reachable from the themed screens.
+- **Vanilla sub-screens**: Options, Edit Server info, Direct Connect and the
+  Mods list are still the vanilla screens; the design reference does not
+  cover them. They are reachable from the themed screens.
 - **World/server icons**: cards draw the reference's generic icon squares
   (world initial / accent glyph), not `icon.png`/server favicons.
 - **Singleplayer card actions**: the reference shows only Play / Create / Back,

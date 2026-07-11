@@ -52,6 +52,17 @@ public class ThemedTextField extends AbstractWidget {
         return value.toString();
     }
 
+    /**
+     * Replaces the field's text (without firing {@code onChange}); used to
+     * restore state when a screen rebuilds its widgets.
+     *
+     * @param text the text to set
+     */
+    public void setValue(String text) {
+        value.setLength(0);
+        value.append(text);
+    }
+
     @Override
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         float radius = Theme.px(Theme.BUTTON_RADIUS);
