@@ -92,11 +92,12 @@ shipped textures there is nothing to mipmap or size-check.
 
 ### Design-reference deviations (intentional)
 
-- **Vanilla sub-screens**: Options, Edit Server info, Direct Connect and the
-  Mods list are still the vanilla screens; the design reference does not
-  cover them. They are reachable from the themed screens.
-- **World/server icons**: cards draw the reference's generic icon squares
-  (world initial / accent glyph), not `icon.png`/server favicons.
+- **Vanilla sub-screens**: Edit Server info, Direct Connect and the Mods
+  list are still the vanilla screens. The Options screen and its sub-screens
+  are themed (see below).
+- **World icons**: world cards draw the reference's generic icon square with
+  the world's initial, not `icon.png`. Server cards *do* render real favicons
+  since the icon bugfix.
 - **Singleplayer card actions**: the reference shows only Play / Create / Back,
   so Edit/Delete/Re-Create world management is not reachable from the themed
   screen in this phase.
@@ -122,3 +123,80 @@ which caps the whole game — vanilla screens included — well below what any r
 GPU does. The render library itself introduces no per-frame allocations and
 batches through the vanilla GUI render types; the F6 debug screen shows a live
 FPS readout for verification on real hardware.
+
+
+## Performance & QoL modules (honesty notes)
+
+Every module documents exactly what it changes; none promises FPS numbers.
+
+- **Performance Mode** affects only the client's own UI rendering (skips the
+  blur pass, drop shadows and RGB line/accent animation). It does not touch
+  world rendering — that is what the other Performance modules and presets do.
+- **Low Particles / No Entity Shadows / FPS Limiter / FPS Presets** write the
+  corresponding *vanilla* options — nothing else. Presets and the FPS Limiter
+  apply only on user interaction in the Click GUI; loading the saved config at
+  startup never overwrites vanilla settings. If Low Particles / No Entity
+  Shadows stay enabled across sessions, vanilla persists the forced value, so
+  a later disable restores the value seen when the module was last enabled.
+- **No Vignette is not implemented.** In 1.21.1 the vignette has no dedicated
+  render layer or event: it draws inside the `CAMERA_OVERLAYS` layer together
+  with the pumpkin, powder-snow, spyglass and portal overlays, and only when
+  Graphics is not Fast. Cancelling that whole layer would silently remove
+  gameplay-critical overlays, which fails this project's honesty rule. (The
+  FPS Presets' Fast graphics preset removes the vignette as a side effect.)
+- **Screenshot-to-clipboard is not implemented.** GLFW's clipboard is
+  text-only; image clipboard requires AWT, which is unsafe to touch on macOS
+  under `-XstartOnFirstThread` and unreliable headless. No supported
+  cross-platform path exists in 1.21.1.
+- **Fullbright** writes the gamma value directly through an access-transformed
+  field because `OptionInstance.set` clamps to the 0–1 slider range; this is
+  the classic fullbright mechanism, restored on disable.
+- **Auto Reconnect** only intercepts the vanilla "Disconnected" screen — a
+  user-chosen disconnect never triggers it.
+- **Server favicons**: decode/upload/release mirrors the vanilla server list
+  (`FaviconTexture`); it could not be exercised against a live server in the
+  authoring environment (raw game-port egress is blocked), so it is verified
+  by inspection plus the offline placeholder path.
+
+
+## Themed Options screens (wrapping, not reimplementing)
+
+The Options root and the Video / Music & Sounds / Controls / Mouse / Chat /
+Skin Customization / Language / Accessibility screens are themed. Every row
+wraps the live vanilla `OptionInstance` — the client only calls `get()`/`set()`,
+so validation, callbacks (GUI scale resize, vsync, fullscreen) and persistence
+are exactly vanilla; options save on screen close like vanilla. Sliders map
+through the option's own `SliderableValueSet` (interface widened by access
+transformer), covering int ranges, unit doubles and xmapped wrappers such as
+Max Framerate. Video Settings reproduces vanilla's mipmap-change texture
+reload on close.
+
+Kept vanilla deliberately:
+- **Key Binds** — the capture list with conflict highlighting is deeply
+  coupled to `KeyBindsList`; re-skinning it would mean reimplementing capture
+  logic. Reachable from the themed Controls screen.
+- **Resource Packs** — drag-and-drop between two live pack lists plus folder
+  watching; kept vanilla and reachable from the themed root.
+- **Online Options** — small vanilla screen with Realms-specific rows.
+- The vanilla **GPU warn-list confirmation** for Fabulous graphics is not
+  reproduced; the graphics cycler switches modes directly.
+- Any option whose value set the wrapper does not recognise embeds its
+  vanilla widget so functionality is never lost (none of the mirrored lists
+  currently need this fallback except none — verified visually).
+- The **Language** list renders names with the vanilla font stack: language
+  names span scripts (Arabic, CJK, Cyrillic) that the bundled Inter face does
+  not cover.
+
+
+## Mods screen, tablist and icon set status
+
+- The **Mods screen** is themed (searchable cards, detail pane with version /
+  id / authors / license / description, Config button via
+  `IConfigScreenFactory`). Mod **logo images** are not loaded — cards show an
+  initial-glyph icon; vanilla logo loading reaches into each mod jar's
+  resources and is deferred. Mod names/descriptions use the vanilla font
+  stack for full script coverage.
+- The **custom tablist module** and the **flat icon atlas** are NOT yet
+  implemented — deferred to the next round rather than shipped unverified.
+  All current screens function without icon sprites (text and generated
+  geometry only), so no vanilla sprites leak into themed screens.

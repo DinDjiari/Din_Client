@@ -27,6 +27,30 @@ public final class Theme {
     /** Live theme configuration, installed at start-up; null until then. */
     private static gg.dindijari.client.module.modules.ThemeModule config;
 
+    /** Performance Mode module, installed at start-up; null until then. */
+    private static gg.dindijari.client.module.Module performanceMode;
+
+    /**
+     * Binds the Performance Mode module so {@link #reducedEffects()} reflects
+     * its toggle. Called once during mod construction.
+     *
+     * @param module the performance-mode module
+     */
+    public static void installPerformanceMode(gg.dindijari.client.module.Module module) {
+        performanceMode = module;
+    }
+
+    /**
+     * Whether expensive UI effects (blur, drop shadows, RGB line animation,
+     * accent hue-cycling) should be skipped. Driven by the Performance Mode
+     * module; a single boolean check, so consulting it costs nothing.
+     *
+     * @return {@code true} while Performance Mode is enabled
+     */
+    public static boolean reducedEffects() {
+        return performanceMode != null && performanceMode.isEnabled();
+    }
+
     /**
      * Binds the live {@code ThemeModule} so the tokens below become dynamic.
      * Called once during mod construction.
@@ -67,7 +91,7 @@ public final class Theme {
         if (config == null) {
             return ACCENT;
         }
-        if (config.accent().isRgbCycle()) {
+        if (config.accent().isRgbCycle() && !reducedEffects()) {
             return ColorUtil.hueCycle(rgbPeriodMs(), 0.0F);
         }
         return config.accent().get();

@@ -6,10 +6,12 @@ import gg.dindijari.client.render.ColorUtil;
 import gg.dindijari.client.render.Fonts;
 import gg.dindijari.client.render.Render2D;
 import gg.dindijari.client.render.Theme;
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DirectJoinServerScreen;
 import net.minecraft.client.gui.screens.EditServerScreen;
+import net.minecraft.client.gui.screens.FaviconTexture;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
@@ -52,9 +54,14 @@ public final class DindijariJoinMultiplayerScreen extends ThemedScreen {
     private final Component emptyLabel = Fonts.ui("No servers yet — add one!");
     private final Component offlineLabel = Fonts.ui("offline");
     private final Component pingingLabel = Fonts.ui("...");
+    private final Component hiddenAddress = Fonts.ui("\u2022\u2022\u2022 hidden \u2022\u2022\u2022");
     private final ServerStatusPinger pinger = new ServerStatusPinger();
     private final Map<ServerData, Component> nameCache = new HashMap<>();
     private final Map<ServerData, Component> addressCache = new HashMap<>();
+    /** Decoded favicon textures per server; released in {@link #removed()}. */
+    private final Map<ServerData, FaviconTexture> icons = new HashMap<>();
+    /** Last uploaded favicon bytes per server, to re-decode only on change. */
+    private final Map<ServerData, byte[]> iconBytes = new HashMap<>();
 
     private ServerList servers;
     private final List<ServerData> visible = new ArrayList<>();
@@ -160,6 +167,44 @@ public final class DindijariJoinMultiplayerScreen extends ThemedScreen {
     public void removed() {
         super.removed();
         pinger.removeAll();
+        // Release all dynamic favicon textures — no texture leaks.
+        for (FaviconTexture icon : icons.values()) {
+            icon.close();
+        }
+        icons.clear();
+        iconBytes.clear();
+    }
+
+    /**
+     * Returns the texture for a server's favicon, (re)decoding it only when
+     * the bytes change, or {@code null} when the server has none / decoding
+     * fails.
+     */
+    private FaviconTexture serverIcon(ServerData data) {
+        byte[] bytes = data.getIconBytes();
+        if (bytes == null) {
+            return null;
+        }
+        byte[] last = iconBytes.get(data);
+        FaviconTexture icon = icons.get(data);
+        if (!java.util.Arrays.equals(bytes, last) || icon == null) {
+            if (icon == null) {
+                icon = FaviconTexture.forServer(this.minecraft.getTextureManager(), data.ip);
+                icons.put(data, icon);
+            }
+            try {
+                icon.upload(NativeImage.read(bytes));
+                iconBytes.put(data, bytes);
+            } catch (Throwable t) {
+                LOGGER.warn("Invalid server icon from {}", data.ip, t);
+                data.setIconBytes(null);
+                icon.close();
+                icons.remove(data);
+                iconBytes.remove(data);
+                return null;
+            }
+        }
+        return icon;
     }
 
     // ------------------------------------------------------------------
@@ -233,19 +278,41 @@ public final class DindijariJoinMultiplayerScreen extends ThemedScreen {
             Render2D.outlineRounded(g, x, y, w, cardH(), radius, 1.2F, Theme.accent());
         }
 
-        // Accent icon square, per the reference.
+        // Icon slot: the server's favicon when it has one, else the neutral
+        // accent placeholder (dimmed while the server is unreachable).
         float iconSize = Theme.px(36);
         float iconX = x + Theme.px(8);
         float iconY = y + (cardH() - iconSize) / 2;
+        boolean offline = data.state() == ServerData.State.UNREACHABLE;
         Render2D.fillRounded(g, iconX, iconY, iconSize, iconSize, Theme.px(6), 0xFF0E0E10);
-        Render2D.fillRounded(g, iconX + Theme.px(10), iconY + Theme.px(10),
-                iconSize - Theme.px(20), iconSize - Theme.px(20), Theme.px(3), Theme.accent());
+        FaviconTexture icon = serverIcon(data);
+        if (icon != null) {
+            int ix = Math.round(iconX + Theme.px(2));
+            int iy = Math.round(iconY + Theme.px(2));
+            int is = Math.round(iconSize - Theme.px(4));
+            g.blit(icon.textureLocation(), ix, iy, is, is, 0.0F, 0.0F, 64, 64, 64, 64);
+            if (offline) {
+                // Dim failed servers' icons under a translucent charcoal wash.
+                Render2D.fillRounded(g, ix, iy, is, is, Theme.px(4), 0xA00E0E10);
+            }
+            // Panel-coloured ring visually rounds the square favicon's corners.
+            Render2D.outlineRounded(g, iconX, iconY, iconSize, iconSize,
+                    Theme.px(6), Theme.px(2), hover || isSelected ? Theme.BUTTON
+                            : ColorUtil.withAlpha(Theme.BUTTON, 170));
+        } else {
+            int glyph = offline ? ColorUtil.scaleAlpha(Theme.TEXT_SECONDARY, 0.6F) : Theme.accent();
+            Render2D.fillRounded(g, iconX + Theme.px(10), iconY + Theme.px(10),
+                    iconSize - Theme.px(20), iconSize - Theme.px(20), Theme.px(3), glyph);
+        }
 
         float textX = iconX + iconSize + Theme.px(10);
         Fonts.draw(g, nameCache.computeIfAbsent(data, d -> Fonts.ui(d.name)),
                 textX, y + Theme.px(10), Theme.TEXT_PRIMARY, false);
-        Fonts.drawScaled(g, addressCache.computeIfAbsent(data, d -> Fonts.ui(d.ip)),
-                textX, y + Theme.px(30), 0.8F, Theme.TEXT_SECONDARY, false);
+        // Streaming privacy: mask addresses while the Server IP Hide module is on.
+        Component address = gg.dindijari.client.module.modules.qol.ServerIpHideModule.active()
+                ? hiddenAddress
+                : addressCache.computeIfAbsent(data, d -> Fonts.ui(d.ip));
+        Fonts.drawScaled(g, address, textX, y + Theme.px(30), 0.8F, Theme.TEXT_SECONDARY, false);
 
         // Right side: ping bars + player count / offline.
         float barsRight = x + w - Theme.px(14);

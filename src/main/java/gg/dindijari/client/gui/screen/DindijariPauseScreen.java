@@ -32,6 +32,10 @@ public final class DindijariPauseScreen extends ThemedScreen {
     private static final int DANGER = 0xFFFF5555;
 
     private final Component header = Fonts.ui("Game Paused");
+    // Real logged-in profile name — resolved at screen construction, never hardcoded.
+    private final Component footer = Fonts.ui(
+            net.minecraft.client.Minecraft.getInstance().getUser().getName()
+                    + " · dindijari client v" + gg.dindijari.client.core.DindijariClient.MOD_VERSION);
 
     private int panelX;
     private int panelY;
@@ -91,6 +95,9 @@ public final class DindijariPauseScreen extends ThemedScreen {
         float pad = Theme.px(Theme.PANEL_PADDING);
         Fonts.drawCentered(g, header, panelX + panelW / 2.0F, panelY + pad + Theme.px(8),
                 1.25F, Theme.TEXT_PRIMARY, false);
+
+        float edge = Theme.px(Theme.GRID);
+        Fonts.draw(g, footer, edge, this.height - 9 - edge, Theme.TEXT_SECONDARY, false);
     }
 
     @Override

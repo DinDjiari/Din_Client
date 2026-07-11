@@ -50,7 +50,7 @@ public abstract class Panel {
 
     /** @return the panel width in GUI units */
     public float width() {
-        return Theme.px(212);
+        return Theme.px(236);
     }
 
     /** @return the header height in GUI units */

@@ -5,6 +5,18 @@ import gg.dindijari.client.gui.ScreenManager;
 import gg.dindijari.client.module.ModuleManager;
 import gg.dindijari.client.module.modules.SprintModule;
 import gg.dindijari.client.module.modules.ThemeModule;
+import gg.dindijari.client.module.modules.performance.FpsLimiterModule;
+import gg.dindijari.client.module.modules.performance.FpsPresetsModule;
+import gg.dindijari.client.module.modules.performance.LowParticlesModule;
+import gg.dindijari.client.module.modules.performance.NoEntityShadowsModule;
+import gg.dindijari.client.module.modules.performance.NoFogModule;
+import gg.dindijari.client.module.modules.performance.PerformanceModeModule;
+import gg.dindijari.client.module.modules.qol.AutoReconnectModule;
+import gg.dindijari.client.module.modules.qol.ChatTimestampsModule;
+import gg.dindijari.client.module.modules.qol.CoordsCopyModule;
+import gg.dindijari.client.module.modules.qol.FullbrightModule;
+import gg.dindijari.client.module.modules.qol.ServerIpHideModule;
+import gg.dindijari.client.module.modules.qol.ZoomModule;
 import gg.dindijari.client.render.Theme;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -61,6 +73,22 @@ public final class DindijariClient {
         ThemeModule themeModule = new ThemeModule();
         moduleManager.register(themeModule);
         Theme.install(themeModule);
+
+        PerformanceModeModule performanceMode = new PerformanceModeModule();
+        Theme.installPerformanceMode(performanceMode);
+        moduleManager.register(
+                performanceMode,
+                new LowParticlesModule(),
+                new NoEntityShadowsModule(),
+                new NoFogModule(),
+                new FpsPresetsModule(),
+                new FpsLimiterModule(),
+                new ZoomModule(),
+                new FullbrightModule(),
+                new ChatTimestampsModule(),
+                new CoordsCopyModule(),
+                new ServerIpHideModule(),
+                new AutoReconnectModule());
 
         Path configRoot = FMLPaths.CONFIGDIR.get().resolve(MOD_ID);
         ConfigManager configManager = new ConfigManager(configRoot);

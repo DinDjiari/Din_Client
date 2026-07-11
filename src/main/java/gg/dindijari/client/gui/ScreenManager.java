@@ -22,8 +22,19 @@ import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.options.AccessibilityOptionsScreen;
+import net.minecraft.client.gui.screens.options.ChatOptionsScreen;
+import net.minecraft.client.gui.screens.options.LanguageSelectScreen;
+import net.minecraft.client.gui.screens.options.MouseSettingsScreen;
+import net.minecraft.client.gui.screens.options.OptionsScreen;
+import net.minecraft.client.gui.screens.options.SkinCustomizationScreen;
+import net.minecraft.client.gui.screens.options.SoundOptionsScreen;
+import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
+import net.minecraft.client.gui.screens.options.controls.ControlsScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
+import gg.dindijari.client.gui.options.DindijariLanguageScreen;
+import gg.dindijari.client.gui.options.DindijariOptions;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -110,6 +121,27 @@ public final class ScreenManager {
             }
         } else if (next.getClass() == GenericMessageScreen.class) {
             event.setNewScreen(new BrandedMessageScreen(next.getTitle()));
+        } else if (next.getClass() == OptionsScreen.class) {
+            event.setNewScreen(DindijariOptions.root(event.getCurrentScreen()));
+        } else if (next.getClass() == VideoSettingsScreen.class) {
+            event.setNewScreen(DindijariOptions.video(event.getCurrentScreen()));
+        } else if (next.getClass() == SoundOptionsScreen.class) {
+            event.setNewScreen(DindijariOptions.sound(event.getCurrentScreen()));
+        } else if (next.getClass() == ControlsScreen.class) {
+            event.setNewScreen(DindijariOptions.controls(event.getCurrentScreen()));
+        } else if (next.getClass() == MouseSettingsScreen.class) {
+            event.setNewScreen(DindijariOptions.mouse(event.getCurrentScreen()));
+        } else if (next.getClass() == ChatOptionsScreen.class) {
+            event.setNewScreen(DindijariOptions.chat(event.getCurrentScreen()));
+        } else if (next.getClass() == SkinCustomizationScreen.class) {
+            event.setNewScreen(DindijariOptions.skin(event.getCurrentScreen()));
+        } else if (next.getClass() == AccessibilityOptionsScreen.class) {
+            event.setNewScreen(DindijariOptions.accessibility(event.getCurrentScreen()));
+        } else if (next.getClass() == LanguageSelectScreen.class) {
+            event.setNewScreen(new DindijariLanguageScreen(event.getCurrentScreen()));
+        } else if (next.getClass() == net.neoforged.neoforge.client.gui.ModListScreen.class) {
+            event.setNewScreen(new gg.dindijari.client.gui.screen.DindijariModsScreen(
+                    event.getCurrentScreen()));
         }
     }
 
@@ -123,11 +155,43 @@ public final class ScreenManager {
         var screen = event.getScreen();
         if (screen instanceof ConnectScreen || screen instanceof ProgressScreen) {
             var g = event.getGuiGraphics();
+            float cx = screen.width / 2.0F;
+            float cy = screen.height / 2.0F;
             Render2D.fillRect(g, 0, 0, screen.width, screen.height, Theme.BACKGROUND);
-            Fonts.drawCentered(g, WORDMARK, screen.width / 2.0F,
-                    screen.height / 2.0F - Theme.px(72), 1.0F, Theme.TEXT_PRIMARY, false);
+            Fonts.drawCentered(g, WORDMARK, cx, cy - Theme.px(96), 1.0F, Theme.TEXT_PRIMARY, false);
+
+            if (screen instanceof ConnectScreen) {
+                // Server name + address (masked while Server IP Hide is on).
+                var server = Minecraft.getInstance().getCurrentServer();
+                if (server != null) {
+                    String address = gg.dindijari.client.module.modules.qol.ServerIpHideModule.active()
+                            ? "\u2022\u2022\u2022 hidden \u2022\u2022\u2022" : server.ip;
+                    String line = server.name + " \u00b7 " + address;
+                    if (!line.equals(connectLineText)) {
+                        connectLineText = line;
+                        connectLine = Fonts.ui(line);
+                    }
+                    Fonts.drawCentered(g, connectLine, cx, cy - Theme.px(44), 1.0F,
+                            Theme.TEXT_SECONDARY, false);
+                }
+            }
+
+            // Indeterminate accent sweep; the vanilla status text renders below.
+            float barW = Math.min(Theme.px(440), screen.width * 0.6F);
+            float barH = Theme.px(5);
+            float barX = cx - barW / 2;
+            float barY = cy - Theme.px(24);
+            Render2D.fillRounded(g, barX, barY, barW, barH, barH / 2, Theme.BUTTON_HOVER);
+            float segW = barW * 0.25F;
+            float t = (System.currentTimeMillis() % 1600L) / 1600.0F;
+            float ping = t < 0.5F ? t * 2 : (1 - t) * 2;
+            Render2D.fillRounded(g, barX + (barW - segW) * (float) Theme.HOVER_EASING.apply(ping),
+                    barY, segW, barH, barH / 2, Theme.accent());
         }
     }
+
+    private String connectLineText;
+    private net.minecraft.network.chat.Component connectLine;
 
     private void onClientTick(ClientTickEvent.Post event) {
         if (!devSettingsPending) {
