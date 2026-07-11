@@ -27,7 +27,11 @@ import net.minecraft.network.chat.Component;
  */
 public final class DindijariTitleScreen extends ThemedScreen {
 
-    private final Component wordmark = Fonts.display("DINDIJARI");
+    // Big title: the logged-in player's name, uppercase, in the display face —
+    // read live from the session user, never hardcoded.
+    private final Component wordmark = Fonts.display(
+            net.minecraft.client.Minecraft.getInstance().getUser().getName()
+                    .toUpperCase(java.util.Locale.ROOT));
     private final Component wordmarkSub = Fonts.ui("C L I E N T");
     // Real logged-in profile name — resolved at screen construction, never hardcoded.
     private final Component playerName = Fonts.ui(
