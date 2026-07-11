@@ -44,6 +44,8 @@ public final class DindijariOptions {
         rows.add(OptionRow.nav("Language", () -> new DindijariLanguageScreen(current())));
         rows.add(OptionRow.nav("Accessibility", () -> accessibility(current())));
         rows.add(OptionRow.nav("Resource Packs", DindijariOptions::vanillaPacks));
+        rows.add(OptionRow.nav("Mods", () ->
+                new gg.dindijari.client.gui.screen.DindijariModsScreen(current())));
         rows.add(OptionRow.nav("Online Options", DindijariOptions::vanillaOnline));
         return new ThemedOptionsScreen(parent, "Options", rows);
     }

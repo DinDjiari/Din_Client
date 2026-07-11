@@ -186,3 +186,17 @@ Kept vanilla deliberately:
 - The **Language** list renders names with the vanilla font stack: language
   names span scripts (Arabic, CJK, Cyrillic) that the bundled Inter face does
   not cover.
+
+
+## Mods screen, tablist and icon set status
+
+- The **Mods screen** is themed (searchable cards, detail pane with version /
+  id / authors / license / description, Config button via
+  `IConfigScreenFactory`). Mod **logo images** are not loaded — cards show an
+  initial-glyph icon; vanilla logo loading reaches into each mod jar's
+  resources and is deferred. Mod names/descriptions use the vanilla font
+  stack for full script coverage.
+- The **custom tablist module** and the **flat icon atlas** are NOT yet
+  implemented — deferred to the next round rather than shipped unverified.
+  All current screens function without icon sprites (text and generated
+  geometry only), so no vanilla sprites leak into themed screens.

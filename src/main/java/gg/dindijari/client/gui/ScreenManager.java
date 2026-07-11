@@ -139,6 +139,9 @@ public final class ScreenManager {
             event.setNewScreen(DindijariOptions.accessibility(event.getCurrentScreen()));
         } else if (next.getClass() == LanguageSelectScreen.class) {
             event.setNewScreen(new DindijariLanguageScreen(event.getCurrentScreen()));
+        } else if (next.getClass() == net.neoforged.neoforge.client.gui.ModListScreen.class) {
+            event.setNewScreen(new gg.dindijari.client.gui.screen.DindijariModsScreen(
+                    event.getCurrentScreen()));
         }
     }
 
