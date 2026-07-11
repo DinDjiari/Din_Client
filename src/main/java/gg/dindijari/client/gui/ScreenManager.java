@@ -214,12 +214,12 @@ public final class ScreenManager {
     }
 
     /**
-     * Shows the Embeddium recommendation toast once per session, shortly
+     * Opens the Embeddium recommendation dialog once per session, shortly
      * (~1.5 s) after the main menu first appears — only when Embeddium is not
-     * installed and the persistent "Embeddium Hint" setting allows it.
+     * installed and the persistent "Nicht mehr anzeigen" setting allows it.
      */
     private void maybeShowEmbeddiumToast(Minecraft minecraft) {
-        if (embeddiumToastShown || !(minecraft.screen instanceof DindijariTitleScreen)) {
+        if (embeddiumToastShown || !(minecraft.screen instanceof DindijariTitleScreen title)) {
             return;
         }
         if (++titleTicks < 30) {
@@ -231,11 +231,11 @@ public final class ScreenManager {
         }
         var notifications = (gg.dindijari.client.module.modules.qol.NotificationsModule)
                 gg.dindijari.client.core.Services.modules().getModule("Notifications");
-        if (notifications != null && !notifications.embeddiumHintEnabled()) {
+        if (notifications == null || !notifications.embeddiumHintEnabled()) {
             return;
         }
-        minecraft.getToasts().addToast(new DindijariToast("Embeddium empfohlen",
-                "F\u00fcr deutlich bessere FPS empfehlen wir Embeddium.", 8000));
+        minecraft.setScreen(new gg.dindijari.client.gui.screen.EmbeddiumDialogScreen(
+                title, notifications));
     }
 
     private void onKey(InputEvent.Key event) {

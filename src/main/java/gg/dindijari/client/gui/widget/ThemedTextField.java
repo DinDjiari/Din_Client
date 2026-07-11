@@ -15,16 +15,23 @@ import org.lwjgl.glfw.GLFW;
 import java.util.function.Consumer;
 
 /**
- * A themed single-line text input (used for the search bars), replacing the
- * vanilla {@code EditBox} sprites with a flat rounded field, placeholder text
- * and a blinking caret. Supports typing, backspace/delete, home/end,
- * ctrl+backspace and paste (ctrl+V); that is sufficient for filter fields.
+ * The client's single-line text input: rounded {@link Theme#BUTTON} field with
+ * an accent border while focused, a blinking caret, full caret movement
+ * (arrows / Home / End, click-to-position), shift/ctrl+A text selection with an
+ * accent-tinted highlight, and clipboard cut/copy/paste. Reused by every place
+ * the client needs text input (search bars, world name/seed, custom branding
+ * text).
  */
 public class ThemedTextField extends AbstractWidget {
 
     private final Consumer<String> onChange;
     private final Component placeholder;
     private final StringBuilder value = new StringBuilder();
+
+    /** Caret position, in [0, length]. */
+    private int caret;
+    /** Selection anchor; equals {@link #caret} when nothing is selected. */
+    private int anchor;
 
     /**
      * Creates a text field.
@@ -61,7 +68,13 @@ public class ThemedTextField extends AbstractWidget {
     public void setValue(String text) {
         value.setLength(0);
         value.append(text);
+        caret = value.length();
+        anchor = caret;
     }
+
+    // ------------------------------------------------------------------
+    // Rendering
+    // ------------------------------------------------------------------
 
     @Override
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
@@ -77,15 +90,75 @@ public class ThemedTextField extends AbstractWidget {
         float textY = getY() + (this.height - 9) / 2.0F + 0.5F;
         if (value.isEmpty() && !isFocused()) {
             Fonts.draw(g, placeholder, textX, textY, Theme.TEXT_SECONDARY, false);
-        } else {
-            // The value changes as the user types; drawing via the vanilla font
-            // with a per-frame styled component is acceptable for a focused,
-            // interactive field (not a hot render loop).
-            Fonts.draw(g, Fonts.ui(value.toString()), textX, textY, Theme.TEXT_PRIMARY, false);
-            if (isFocused() && (System.currentTimeMillis() / 500) % 2 == 0) {
-                float caretX = textX + Fonts.width(Fonts.ui(value.toString())) + 1;
-                Render2D.fillRect(g, caretX, textY - 1, 1, 11, Theme.accent());
+            return;
+        }
+
+        // Selection highlight behind the text.
+        if (hasSelection() && isFocused()) {
+            float selStart = textX + widthOf(0, selectionStart());
+            float selEnd = textX + widthOf(0, selectionEnd());
+            Render2D.fillRounded(g, selStart, textY - 1.5F, selEnd - selStart, 12,
+                    Theme.px(2), ColorUtil.withAlpha(Theme.accent(), 70));
+        }
+
+        Fonts.draw(g, Fonts.ui(value.toString()), textX, textY, Theme.TEXT_PRIMARY, false);
+
+        if (isFocused() && (System.currentTimeMillis() / 500) % 2 == 0) {
+            float caretX = textX + widthOf(0, caret);
+            Render2D.fillRect(g, caretX, textY - 1.5F, 1, 12, Theme.accent());
+        }
+    }
+
+    /** Rendered width of the substring [from, to). */
+    private float widthOf(int from, int to) {
+        if (to <= from) {
+            return 0;
+        }
+        return Fonts.width(Fonts.ui(value.substring(from, to)));
+    }
+
+    // ------------------------------------------------------------------
+    // Editing
+    // ------------------------------------------------------------------
+
+    private boolean hasSelection() {
+        return caret != anchor;
+    }
+
+    private int selectionStart() {
+        return Math.min(caret, anchor);
+    }
+
+    private int selectionEnd() {
+        return Math.max(caret, anchor);
+    }
+
+    private void deleteSelection() {
+        value.delete(selectionStart(), selectionEnd());
+        caret = selectionStart();
+        anchor = caret;
+    }
+
+    private void insert(String text) {
+        if (hasSelection()) {
+            deleteSelection();
+        }
+        StringBuilder clean = new StringBuilder();
+        for (char c : text.toCharArray()) {
+            if (StringUtil.isAllowedChatCharacter(c)) {
+                clean.append(c);
             }
+        }
+        value.insert(caret, clean);
+        caret += clean.length();
+        anchor = caret;
+        onChange.accept(getValue());
+    }
+
+    private void moveCaret(int position, boolean extendSelection) {
+        caret = Math.max(0, Math.min(value.length(), position));
+        if (!extendSelection) {
+            anchor = caret;
         }
     }
 
@@ -94,8 +167,7 @@ public class ThemedTextField extends AbstractWidget {
         if (!isFocused() || !StringUtil.isAllowedChatCharacter(c)) {
             return false;
         }
-        value.append(c);
-        onChange.accept(getValue());
+        insert(String.valueOf(c));
         return true;
     }
 
@@ -104,29 +176,76 @@ public class ThemedTextField extends AbstractWidget {
         if (!isFocused()) {
             return false;
         }
+        boolean shift = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0;
+        boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        Minecraft minecraft = Minecraft.getInstance();
         switch (keyCode) {
+            case GLFW.GLFW_KEY_LEFT -> {
+                moveCaret(caret - 1, shift);
+                return true;
+            }
+            case GLFW.GLFW_KEY_RIGHT -> {
+                moveCaret(caret + 1, shift);
+                return true;
+            }
+            case GLFW.GLFW_KEY_HOME -> {
+                moveCaret(0, shift);
+                return true;
+            }
+            case GLFW.GLFW_KEY_END -> {
+                moveCaret(value.length(), shift);
+                return true;
+            }
             case GLFW.GLFW_KEY_BACKSPACE -> {
-                if (!value.isEmpty()) {
-                    if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
-                        value.setLength(0);
-                    } else {
-                        value.setLength(value.length() - 1);
-                    }
+                if (hasSelection()) {
+                    deleteSelection();
+                    onChange.accept(getValue());
+                } else if (caret > 0) {
+                    value.deleteCharAt(caret - 1);
+                    moveCaret(caret - 1, false);
                     onChange.accept(getValue());
                 }
                 return true;
             }
             case GLFW.GLFW_KEY_DELETE -> {
-                if (!value.isEmpty()) {
-                    value.setLength(0);
+                if (hasSelection()) {
+                    deleteSelection();
+                    onChange.accept(getValue());
+                } else if (caret < value.length()) {
+                    value.deleteCharAt(caret);
                     onChange.accept(getValue());
                 }
                 return true;
             }
-            case GLFW.GLFW_KEY_V -> {
-                if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
-                    value.append(Minecraft.getInstance().keyboardHandler.getClipboard());
+            case GLFW.GLFW_KEY_A -> {
+                if (ctrl) {
+                    anchor = 0;
+                    caret = value.length();
+                    return true;
+                }
+                return false;
+            }
+            case GLFW.GLFW_KEY_C -> {
+                if (ctrl && hasSelection()) {
+                    minecraft.keyboardHandler.setClipboard(
+                            value.substring(selectionStart(), selectionEnd()));
+                    return true;
+                }
+                return false;
+            }
+            case GLFW.GLFW_KEY_X -> {
+                if (ctrl && hasSelection()) {
+                    minecraft.keyboardHandler.setClipboard(
+                            value.substring(selectionStart(), selectionEnd()));
+                    deleteSelection();
                     onChange.accept(getValue());
+                    return true;
+                }
+                return false;
+            }
+            case GLFW.GLFW_KEY_V -> {
+                if (ctrl) {
+                    insert(minecraft.keyboardHandler.getClipboard());
                     return true;
                 }
                 return false;
@@ -135,6 +254,20 @@ public class ThemedTextField extends AbstractWidget {
                 return false;
             }
         }
+    }
+
+    @Override
+    public void onClick(double mouseX, double mouseY) {
+        // Place the caret at the clicked character boundary.
+        float textX = getX() + Theme.px(10);
+        int best = value.length();
+        for (int i = 0; i <= value.length(); i++) {
+            if (textX + widthOf(0, i) >= mouseX - 2) {
+                best = i;
+                break;
+            }
+        }
+        moveCaret(best, false);
     }
 
     @Override

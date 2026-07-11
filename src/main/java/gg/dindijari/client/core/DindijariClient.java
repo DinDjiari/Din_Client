@@ -75,6 +75,7 @@ public final class DindijariClient {
         ThemeModule themeModule = new ThemeModule();
         moduleManager.register(themeModule);
         Theme.install(themeModule);
+        moduleManager.register(new gg.dindijari.client.module.modules.BrandingModule());
 
         PerformanceModeModule performanceMode = new PerformanceModeModule();
         Theme.installPerformanceMode(performanceMode);

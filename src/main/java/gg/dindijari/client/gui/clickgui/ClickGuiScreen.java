@@ -81,6 +81,12 @@ public final class ClickGuiScreen extends ThemedScreen {
         themeEditor = new ThemeEditorPanel(
                 (ThemeModule) Services.modules().getModule("Theme"), 0, 0);
         toPlace.add(themeEditor);
+        BrandingPanel brandingPanel = new BrandingPanel(
+                (gg.dindijari.client.module.modules.BrandingModule)
+                        Services.modules().getModule("Branding"), 0, 0);
+        toPlace.add(brandingPanel);
+        addRenderableWidget(brandingPanel.titleField());
+        addRenderableWidget(brandingPanel.subtitleField());
 
         for (Panel panel : toPlace) {
             float[] saved = POSITIONS.get(panelKey(panel));
@@ -145,6 +151,9 @@ public final class ClickGuiScreen extends ThemedScreen {
             if (activePanel instanceof ThemeEditorPanel te && te.settingsDragged(mx)) {
                 return true;
             }
+            if (activePanel instanceof BrandingPanel bp && bp.settingsDragged(mx)) {
+                return true;
+            }
             if (activePanel.mouseDragged(mx, my, this.width, this.height)) {
                 return true;
             }
@@ -160,6 +169,8 @@ public final class ClickGuiScreen extends ThemedScreen {
                 cp.settingsReleased();
             } else if (panel instanceof ThemeEditorPanel te) {
                 te.settingsReleased();
+            } else if (panel instanceof BrandingPanel bp) {
+                bp.settingsReleased();
             }
         }
         activePanel = null;

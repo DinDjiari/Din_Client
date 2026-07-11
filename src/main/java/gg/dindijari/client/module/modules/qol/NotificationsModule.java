@@ -26,11 +26,20 @@ public final class NotificationsModule extends Module {
     }
 
     /**
-     * Whether the Embeddium recommendation toast may be shown.
+     * Whether the Embeddium recommendation may be shown.
      *
      * @return {@code true} unless the user disabled the hint
      */
     public boolean embeddiumHintEnabled() {
         return embeddiumHint.get();
+    }
+
+    /**
+     * The underlying hint setting (written by the dialog's checkbox).
+     *
+     * @return the setting
+     */
+    public gg.dindijari.client.setting.BooleanSetting hintSetting() {
+        return embeddiumHint;
     }
 }

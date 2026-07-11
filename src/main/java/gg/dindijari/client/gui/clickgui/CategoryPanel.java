@@ -98,6 +98,8 @@ public final class CategoryPanel extends Panel {
             if (!m.isToggleable()) {
                 list.removeIf(s -> s instanceof KeybindSetting);
             }
+            // Free-text settings are edited in their dedicated panel (Branding).
+            list.removeIf(s -> s instanceof gg.dindijari.client.setting.StringSetting);
             return list;
         });
     }

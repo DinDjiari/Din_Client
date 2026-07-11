@@ -27,12 +27,12 @@ import net.minecraft.network.chat.Component;
  */
 public final class DindijariTitleScreen extends ThemedScreen {
 
-    // Big title: the logged-in player's name, uppercase, in the display face —
-    // read live from the session user, never hardcoded.
-    private final Component wordmark = Fonts.display(
-            net.minecraft.client.Minecraft.getInstance().getUser().getName()
-                    .toUpperCase(java.util.Locale.ROOT));
-    private final Component wordmarkSub = Fonts.ui("C L I E N T");
+    // Title + subtitle come from the Branding module (default: the logged-in
+    // player's name, read live) and render through the shared renderer.
+    private final gg.dindijari.client.render.BrandingRenderer brandingRenderer =
+            new gg.dindijari.client.render.BrandingRenderer(
+                    (gg.dindijari.client.module.modules.BrandingModule)
+                            gg.dindijari.client.core.Services.modules().getModule("Branding"));
     // Real logged-in profile name — resolved at screen construction, never hardcoded.
     private final Component playerName = Fonts.ui(
             net.minecraft.client.Minecraft.getInstance().getUser().getName());
@@ -96,18 +96,8 @@ public final class DindijariTitleScreen extends ThemedScreen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
 
-        // Wordmark with accent underline, per the design reference. Drawn at
-        // scale 1 in the display-size face so glyph rasters are never
-        // upscaled (crisp up to GUI scale 4 / 4K).
-        float cx = this.width / 2.0F;
-        float logoY = this.height / 4.0F - Theme.px(52);
-        Fonts.drawCentered(g, wordmark, cx, logoY, 1.0F, Theme.TEXT_PRIMARY, false);
-
-        float logoW = Fonts.width(wordmark);
-        float underlineY = Theme.snap(logoY + 27 + Theme.px(6));
-        Render2D.fillRounded(g, cx - logoW / 2, underlineY, logoW, Theme.px(4), Theme.px(2), Theme.accent());
-
-        Fonts.drawCentered(g, wordmarkSub, cx, underlineY + Theme.px(14), 1.0F, Theme.TEXT_SECONDARY, false);
+        // Title block: fully user-configurable via the Branding module.
+        brandingRenderer.render(g, this.width / 2.0F, this.height / 4.0F - Theme.px(52));
 
         // Footer, bottom-left: player name as larger primary white text with
         // the version line as smaller secondary grey (#A0A0A8) underneath.
