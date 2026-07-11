@@ -1,0 +1,10 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "dindijariclient:inter-regular.ttf",
+      "size": 10.0,
+      "oversample": 4.0
+    }
+  ]
+}

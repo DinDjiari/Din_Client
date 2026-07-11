@@ -31,6 +31,7 @@ public abstract class Module {
     private final List<Runnable> changeListeners = new ArrayList<>();
 
     private boolean enabled;
+    private boolean toggleable = true;
 
     /**
      * Creates a new module with an unbound toggle keybind.
@@ -127,6 +128,25 @@ public abstract class Module {
      */
     public final void toggle() {
         setEnabled(!enabled);
+    }
+
+    /**
+     * Indicates whether this module has a meaningful on/off state. Settings-only
+     * modules (e.g. the theme) return {@code false} and render without a toggle
+     * in the GUI.
+     *
+     * @return {@code true} if the module can be toggled
+     */
+    public final boolean isToggleable() {
+        return toggleable;
+    }
+
+    /**
+     * Marks this module as settings-only (no on/off toggle shown in the GUI).
+     * Intended to be called from a subclass constructor.
+     */
+    protected final void setToggleable(boolean toggleable) {
+        this.toggleable = toggleable;
     }
 
     /**
