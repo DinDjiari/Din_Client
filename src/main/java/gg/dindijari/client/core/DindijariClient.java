@@ -54,7 +54,7 @@ public final class DindijariClient {
     public static final String MOD_NAME = "Dindijari Client";
 
     /** The mod version shown in UI footers; kept in sync with gradle.properties. */
-    public static final String MOD_VERSION = "0.1.0";
+    public static final String MOD_VERSION = "1.2.0";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
