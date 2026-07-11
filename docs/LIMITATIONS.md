@@ -92,11 +92,12 @@ shipped textures there is nothing to mipmap or size-check.
 
 ### Design-reference deviations (intentional)
 
-- **Vanilla sub-screens**: Options, Edit Server info, Direct Connect and the
-  Mods list are still the vanilla screens; the design reference does not
-  cover them. They are reachable from the themed screens.
-- **World/server icons**: cards draw the reference's generic icon squares
-  (world initial / accent glyph), not `icon.png`/server favicons.
+- **Vanilla sub-screens**: Edit Server info, Direct Connect and the Mods
+  list are still the vanilla screens. The Options screen and its sub-screens
+  are themed (see below).
+- **World icons**: world cards draw the reference's generic icon square with
+  the world's initial, not `icon.png`. Server cards *do* render real favicons
+  since the icon bugfix.
 - **Singleplayer card actions**: the reference shows only Play / Create / Back,
   so Edit/Delete/Re-Create world management is not reachable from the themed
   screen in this phase.
@@ -156,3 +157,32 @@ Every module documents exactly what it changes; none promises FPS numbers.
   (`FaviconTexture`); it could not be exercised against a live server in the
   authoring environment (raw game-port egress is blocked), so it is verified
   by inspection plus the offline placeholder path.
+
+
+## Themed Options screens (wrapping, not reimplementing)
+
+The Options root and the Video / Music & Sounds / Controls / Mouse / Chat /
+Skin Customization / Language / Accessibility screens are themed. Every row
+wraps the live vanilla `OptionInstance` — the client only calls `get()`/`set()`,
+so validation, callbacks (GUI scale resize, vsync, fullscreen) and persistence
+are exactly vanilla; options save on screen close like vanilla. Sliders map
+through the option's own `SliderableValueSet` (interface widened by access
+transformer), covering int ranges, unit doubles and xmapped wrappers such as
+Max Framerate. Video Settings reproduces vanilla's mipmap-change texture
+reload on close.
+
+Kept vanilla deliberately:
+- **Key Binds** — the capture list with conflict highlighting is deeply
+  coupled to `KeyBindsList`; re-skinning it would mean reimplementing capture
+  logic. Reachable from the themed Controls screen.
+- **Resource Packs** — drag-and-drop between two live pack lists plus folder
+  watching; kept vanilla and reachable from the themed root.
+- **Online Options** — small vanilla screen with Realms-specific rows.
+- The vanilla **GPU warn-list confirmation** for Fabulous graphics is not
+  reproduced; the graphics cycler switches modes directly.
+- Any option whose value set the wrapper does not recognise embeds its
+  vanilla widget so functionality is never lost (none of the mirrored lists
+  currently need this fallback except none — verified visually).
+- The **Language** list renders names with the vanilla font stack: language
+  names span scripts (Arabic, CJK, Cyrillic) that the bundled Inter face does
+  not cover.
