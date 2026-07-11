@@ -15,6 +15,8 @@ import gg.dindijari.client.module.modules.qol.AutoReconnectModule;
 import gg.dindijari.client.module.modules.qol.ChatTimestampsModule;
 import gg.dindijari.client.module.modules.qol.CoordsCopyModule;
 import gg.dindijari.client.module.modules.qol.FullbrightModule;
+import gg.dindijari.client.module.modules.qol.MusicModule;
+import gg.dindijari.client.module.modules.qol.NotificationsModule;
 import gg.dindijari.client.module.modules.qol.ServerIpHideModule;
 import gg.dindijari.client.module.modules.qol.ZoomModule;
 import gg.dindijari.client.render.Theme;
@@ -88,12 +90,20 @@ public final class DindijariClient {
                 new ChatTimestampsModule(),
                 new CoordsCopyModule(),
                 new ServerIpHideModule(),
-                new AutoReconnectModule());
+                new AutoReconnectModule(),
+                new MusicModule(),
+                new NotificationsModule());
 
         Path configRoot = FMLPaths.CONFIGDIR.get().resolve(MOD_ID);
+        // First launch = no config profile has ever been written.
+        boolean firstLaunch = !java.nio.file.Files.exists(
+                configRoot.resolve("profiles").resolve("default.json"));
         ConfigManager configManager = new ConfigManager(configRoot);
         configManager.bind(moduleManager.getModules());
         configManager.load();
+        if (firstLaunch) {
+            muteMusicOnFirstLaunch();
+        }
 
         moduleManager.registerEvents();
         new ScreenManager().registerEvents();
@@ -103,5 +113,20 @@ public final class DindijariClient {
                 new Thread(configManager::shutdown, "dindijari-config-flush"));
 
         LOGGER.info("{} ready", MOD_NAME);
+    }
+
+    /**
+     * Sets the vanilla Music volume to 0 exactly once — on the very first
+     * launch, before any config exists. Later launches never touch it; the
+     * "Music" module in the Click GUI (or the vanilla slider) turns it back
+     * on. Documented in the README.
+     */
+    private static void muteMusicOnFirstLaunch() {
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        if (minecraft != null && minecraft.options != null) {
+            minecraft.options.getSoundSourceOptionInstance(
+                    net.minecraft.sounds.SoundSource.MUSIC).set(0.0);
+            LOGGER.info("First launch: vanilla music volume set to 0 (re-enable via the Music module)");
+        }
     }
 }

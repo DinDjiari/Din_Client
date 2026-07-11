@@ -30,9 +30,9 @@ public final class DindijariTitleScreen extends ThemedScreen {
     private final Component wordmark = Fonts.display("DINDIJARI");
     private final Component wordmarkSub = Fonts.ui("C L I E N T");
     // Real logged-in profile name — resolved at screen construction, never hardcoded.
-    private final Component versionLine = Fonts.ui(
-            net.minecraft.client.Minecraft.getInstance().getUser().getName()
-                    + " · dindijari client v" + DindijariClient.MOD_VERSION);
+    private final Component playerName = Fonts.ui(
+            net.minecraft.client.Minecraft.getInstance().getUser().getName());
+    private final Component versionLine = Fonts.ui("dindijari client v" + DindijariClient.MOD_VERSION);
 
     /**
      * Creates the themed main menu.
@@ -105,9 +105,11 @@ public final class DindijariTitleScreen extends ThemedScreen {
 
         Fonts.drawCentered(g, wordmarkSub, cx, underlineY + Theme.px(14), 1.0F, Theme.TEXT_SECONDARY, false);
 
-        // Footer.
+        // Footer: player name primary, version line smaller and secondary.
         float pad = Theme.px(Theme.GRID);
-        Fonts.draw(g, versionLine, pad, this.height - 9 - pad, Theme.TEXT_SECONDARY, false);
+        Fonts.draw(g, playerName, pad, this.height - 9 - pad, Theme.TEXT_PRIMARY, false);
+        Fonts.drawScaled(g, versionLine, pad + Fonts.width(playerName) + Theme.px(8),
+                this.height - 9 - pad + 1.5F, 0.8F, Theme.TEXT_SECONDARY, false);
     }
 
     @Override

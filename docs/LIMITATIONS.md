@@ -200,3 +200,16 @@ Kept vanilla deliberately:
   implemented — deferred to the next round rather than shipped unverified.
   All current screens function without icon sprites (text and generated
   geometry only), so no vanilla sprites leak into themed screens.
+
+
+## Embeddium relationship
+
+Embeddium is recommended, detected (`ModList.get().isLoaded("embeddium")`)
+and declared as an *optional* dependency — never bundled, vendored or
+required; no Sodium/Embeddium code is copied. The client has no mixins and
+draws its UI exclusively through vanilla `GuiGraphics` render types and
+NeoForge events, so there is no render-hook surface to conflict with
+Embeddium's world-renderer replacement. Side-by-side compatibility was
+verified by launching the dev client with the Embeddium jar installed.
+The client's own Performance modules only reduce client-UI overhead and
+write vanilla options; they are not comparable to a rendering engine rewrite.

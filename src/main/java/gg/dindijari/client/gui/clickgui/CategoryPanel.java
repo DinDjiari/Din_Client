@@ -33,11 +33,18 @@ public final class CategoryPanel extends Panel {
     /** Modules whose settings are expanded; session-persistent. */
     private static final Set<String> EXPANDED = new HashSet<>();
 
+    private static final int STATUS_GREEN = 0xFF4CD964;
+    private static final String EMBEDDIUM_URL = "https://modrinth.com/mod/embeddium";
+
     private final Category category;
+    private final boolean embeddiumLoaded =
+            net.neoforged.fml.ModList.get().isLoaded("embeddium");
+    private final Component embeddiumRow;
     private final SettingRows rows = new SettingRows();
     private final Map<Module, Component> names = new HashMap<>();
     private final Map<Module, List<Setting<?>>> visibleSettings = new HashMap<>();
     private final Component emptyLabel = Fonts.ui("No modules yet");
+    private final Component downloadLabel = Fonts.ui("modrinth.com/mod/embeddium \u2197");
 
     private String filter = "";
 
@@ -51,6 +58,14 @@ public final class CategoryPanel extends Panel {
     public CategoryPanel(Category category, float x, float y) {
         super(category.getDisplayName(), x, y);
         this.category = category;
+        this.embeddiumRow = embeddiumLoaded
+                ? Fonts.ui("Embeddium erkannt \u2713")
+                : Fonts.ui("Embeddium nicht installiert \u2014 empfohlen f\u00fcr beste FPS");
+    }
+
+    /** Height of the Embeddium info row (Performance panel only). */
+    private float infoRowHeight() {
+        return category == Category.PERFORMANCE ? Theme.px(embeddiumLoaded ? 24 : 40) : 0;
     }
 
     /**
@@ -95,9 +110,9 @@ public final class CategoryPanel extends Panel {
     protected float bodyHeight() {
         List<Module> modules = modules();
         if (modules.isEmpty()) {
-            return Theme.px(24);
+            return infoRowHeight() + Theme.px(24);
         }
-        float h = 0;
+        float h = infoRowHeight();
         for (Module m : modules) {
             h += moduleRowHeight();
             if (EXPANDED.contains(m.getName())) {
@@ -110,6 +125,22 @@ public final class CategoryPanel extends Panel {
     @Override
     protected void renderBody(GuiGraphics g, float bx, float by, int mouseX, int mouseY) {
         float w = width() - Theme.px(20);
+        if (category == Category.PERFORMANCE) {
+            if (embeddiumLoaded) {
+                Fonts.drawScaled(g, embeddiumRow, bx + Theme.px(6), by + Theme.px(5),
+                        0.85F, STATUS_GREEN, false);
+            } else {
+                boolean hover = mouseX >= bx && mouseX <= bx + w
+                        && mouseY >= by && mouseY < by + infoRowHeight();
+                Render2D.fillRounded(g, bx, by, w, infoRowHeight() - Theme.px(4), Theme.px(4),
+                        ColorUtil.withAlpha(Theme.BUTTON_HOVER, hover ? 220 : 120));
+                Fonts.drawScaled(g, embeddiumRow, bx + Theme.px(6), by + Theme.px(6),
+                        0.75F, Theme.TEXT_SECONDARY, false);
+                Fonts.drawScaled(g, downloadLabel, bx + Theme.px(6), by + Theme.px(24),
+                        0.75F, Theme.accent(), false);
+            }
+            by += infoRowHeight();
+        }
         List<Module> modules = modules();
         if (modules.isEmpty()) {
             Fonts.drawScaled(g, emptyLabel, bx + Theme.px(4), by + Theme.px(4),
@@ -145,6 +176,21 @@ public final class CategoryPanel extends Panel {
         float bx = getX() + Theme.px(10);
         float w = width() - Theme.px(20);
         float cy = getY() + headerHeight();
+        if (category == Category.PERFORMANCE) {
+            if (!embeddiumLoaded && my >= cy && my < cy + infoRowHeight()) {
+                // Vanilla link-confirmation flow, then back to this GUI.
+                net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+                net.minecraft.client.gui.screens.Screen owner = minecraft.screen;
+                minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmLinkScreen(open -> {
+                    if (open) {
+                        net.minecraft.Util.getPlatform().openUri(EMBEDDIUM_URL);
+                    }
+                    minecraft.setScreen(owner);
+                }, EMBEDDIUM_URL, true));
+                return true;
+            }
+            cy += infoRowHeight();
+        }
         for (Module m : modules()) {
             float rh = moduleRowHeight();
             if (my >= cy && my < cy + rh) {
