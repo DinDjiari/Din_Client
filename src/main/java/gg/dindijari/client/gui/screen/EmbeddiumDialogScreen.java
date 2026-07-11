@@ -67,7 +67,7 @@ public final class EmbeddiumDialogScreen extends ThemedScreen {
 
         int bh = Math.round(Theme.px(32));
         int by = panelY + panelH - bh - Math.round(Theme.px(38));
-        int downloadW = Math.round(Theme.px(190));
+        int downloadW = Math.round(Theme.px(210));
         int laterW = Math.round(Theme.px(100));
         int gap = Math.round(Theme.px(Theme.GRID));
         int total = downloadW + gap + laterW;
