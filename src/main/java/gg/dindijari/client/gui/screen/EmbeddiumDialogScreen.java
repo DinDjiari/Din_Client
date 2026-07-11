@@ -52,20 +52,21 @@ public final class EmbeddiumDialogScreen extends ThemedScreen {
 
     @Override
     protected void init() {
-        panelW = Math.round(Theme.px(400));
-        panelH = Math.round(Theme.px(196));
+        panelW = Math.round(Theme.px(440));
+        panelH = Math.round(Theme.px(240));
         panelX = (this.width - panelW) / 2;
         panelY = (this.height - panelH) / 2;
 
         int pad = Math.round(Theme.px(Theme.PANEL_PADDING));
+        // Body wraps across the full panel width (below the icon+title row).
         body = this.font.split(Fonts.ui(
                 "Embeddium verbessert die FPS deutlich (optimierter Weltrenderer) "
                         + "und wird f\u00fcr diesen Client empfohlen. Es ist ein separater "
                         + "Mod und wird nicht mitgeliefert."),
-                panelW - 2 * pad - Math.round(Theme.px(44)));
+                panelW - 2 * pad);
 
         int bh = Math.round(Theme.px(32));
-        int by = panelY + panelH - bh - Math.round(Theme.px(40));
+        int by = panelY + panelH - bh - Math.round(Theme.px(38));
         int downloadW = Math.round(Theme.px(190));
         int laterW = Math.round(Theme.px(100));
         int gap = Math.round(Theme.px(Theme.GRID));
@@ -76,8 +77,8 @@ public final class EmbeddiumDialogScreen extends ThemedScreen {
                 laterW, bh, "Sp\u00e4ter", this::onClose));
 
         addRenderableWidget(new ThemedCheckbox(panelX + pad,
-                panelY + panelH - Math.round(Theme.px(32)),
-                panelW - 2 * pad, Math.round(Theme.px(22)), "Nicht mehr anzeigen",
+                panelY + panelH - Math.round(Theme.px(26)),
+                panelW - 2 * pad, Math.round(Theme.px(20)), "Nicht mehr anzeigen",
                 () -> !notifications.embeddiumHintEnabled(),
                 dontShow -> notifications.hintSetting().set(!dontShow)));
     }
@@ -111,10 +112,11 @@ public final class EmbeddiumDialogScreen extends ThemedScreen {
                 cx + Theme.px(7), cy - Theme.px(2), cx - Theme.px(1), cy - Theme.px(2), accent);
 
         float textX = ix + iconSize + Theme.px(12);
-        Fonts.drawScaled(g, title, textX, iy + Theme.px(2), 1.25F, Theme.TEXT_PRIMARY, false);
-        float ty = iy + Theme.px(24);
+        Fonts.drawScaled(g, title, textX, iy + Theme.px(8), 1.2F, Theme.TEXT_PRIMARY, false);
+        // Body starts below the icon/title row, spanning the full width.
+        float ty = iy + iconSize + Theme.px(8);
         for (FormattedCharSequence line : body) {
-            g.drawString(this.font, line, Math.round(textX), Math.round(ty),
+            g.drawString(this.font, line, Math.round(ix), Math.round(ty),
                     Theme.TEXT_SECONDARY, false);
             ty += 11;
         }
