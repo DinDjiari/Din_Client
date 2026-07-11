@@ -122,3 +122,37 @@ which caps the whole game — vanilla screens included — well below what any r
 GPU does. The render library itself introduces no per-frame allocations and
 batches through the vanilla GUI render types; the F6 debug screen shows a live
 FPS readout for verification on real hardware.
+
+
+## Performance & QoL modules (honesty notes)
+
+Every module documents exactly what it changes; none promises FPS numbers.
+
+- **Performance Mode** affects only the client's own UI rendering (skips the
+  blur pass, drop shadows and RGB line/accent animation). It does not touch
+  world rendering — that is what the other Performance modules and presets do.
+- **Low Particles / No Entity Shadows / FPS Limiter / FPS Presets** write the
+  corresponding *vanilla* options — nothing else. Presets and the FPS Limiter
+  apply only on user interaction in the Click GUI; loading the saved config at
+  startup never overwrites vanilla settings. If Low Particles / No Entity
+  Shadows stay enabled across sessions, vanilla persists the forced value, so
+  a later disable restores the value seen when the module was last enabled.
+- **No Vignette is not implemented.** In 1.21.1 the vignette has no dedicated
+  render layer or event: it draws inside the `CAMERA_OVERLAYS` layer together
+  with the pumpkin, powder-snow, spyglass and portal overlays, and only when
+  Graphics is not Fast. Cancelling that whole layer would silently remove
+  gameplay-critical overlays, which fails this project's honesty rule. (The
+  FPS Presets' Fast graphics preset removes the vignette as a side effect.)
+- **Screenshot-to-clipboard is not implemented.** GLFW's clipboard is
+  text-only; image clipboard requires AWT, which is unsafe to touch on macOS
+  under `-XstartOnFirstThread` and unreliable headless. No supported
+  cross-platform path exists in 1.21.1.
+- **Fullbright** writes the gamma value directly through an access-transformed
+  field because `OptionInstance.set` clamps to the 0–1 slider range; this is
+  the classic fullbright mechanism, restored on disable.
+- **Auto Reconnect** only intercepts the vanilla "Disconnected" screen — a
+  user-chosen disconnect never triggers it.
+- **Server favicons**: decode/upload/release mirrors the vanilla server list
+  (`FaviconTexture`); it could not be exercised against a live server in the
+  authoring environment (raw game-port egress is blocked), so it is verified
+  by inspection plus the offline placeholder path.

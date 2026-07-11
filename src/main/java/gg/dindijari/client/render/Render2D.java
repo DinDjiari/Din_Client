@@ -246,6 +246,9 @@ public final class Render2D {
      */
     public static void dropShadow(GuiGraphics g, float x, float y, float w, float h,
                                   float radius, float spread, int color) {
+        if (Theme.reducedEffects()) {
+            return;
+        }
         int transparent = color & 0x00FFFFFF;
         emitBand(g,
                 x, y, w, h, radius, radius, radius, radius,
@@ -266,6 +269,11 @@ public final class Render2D {
      * @param h height (thickness)
      */
     public static void rgbLine(GuiGraphics g, float x, float y, float w, float h) {
+        if (Theme.reducedEffects()) {
+            // Performance Mode: a static accent line instead of the animated sweep.
+            fillRect(g, x, y, w, h, Theme.accent());
+            return;
+        }
         final int slices = 24;
         float sliceW = w / slices;
         long period = Theme.rgbPeriodMs();

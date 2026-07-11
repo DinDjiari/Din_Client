@@ -88,7 +88,7 @@ public final class CategoryPanel extends Panel {
     }
 
     private float moduleRowHeight() {
-        return Theme.px(30);
+        return Theme.px(27);
     }
 
     @Override
@@ -125,9 +125,9 @@ public final class CategoryPanel extends Panel {
                         ColorUtil.withAlpha(Theme.BUTTON_HOVER, 200));
             }
             Component name = names.computeIfAbsent(m, k -> Fonts.ui(k.getName()));
-            Fonts.draw(g, name, bx + Theme.px(6), cy + Theme.px(10), Theme.TEXT_PRIMARY, false);
+            Fonts.drawScaled(g, name, bx + Theme.px(6), cy + Theme.px(9), 0.9F, Theme.TEXT_PRIMARY, false);
             if (m.isToggleable()) {
-                SettingRows.drawToggle(g, bx + w - Theme.px(34), cy + Theme.px(7), m.isEnabled());
+                SettingRows.drawToggle(g, bx + w - Theme.px(34), cy + Theme.px(6), m.isEnabled());
             }
             cy += rh;
             if (EXPANDED.contains(m.getName())) {

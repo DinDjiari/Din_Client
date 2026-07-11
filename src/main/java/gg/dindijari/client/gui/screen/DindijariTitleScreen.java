@@ -29,7 +29,10 @@ public final class DindijariTitleScreen extends ThemedScreen {
 
     private final Component wordmark = Fonts.display("DINDIJARI");
     private final Component wordmarkSub = Fonts.ui("C L I E N T");
-    private final Component versionLine = Fonts.ui("dindijari client v" + DindijariClient.MOD_VERSION);
+    // Real logged-in profile name — resolved at screen construction, never hardcoded.
+    private final Component versionLine = Fonts.ui(
+            net.minecraft.client.Minecraft.getInstance().getUser().getName()
+                    + " · dindijari client v" + DindijariClient.MOD_VERSION);
 
     /**
      * Creates the themed main menu.

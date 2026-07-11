@@ -33,9 +33,14 @@ public abstract class ThemedScreen extends Screen {
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         if (this.minecraft.level != null) {
             // Vanilla's blur post-chain (robust in 1.21.1; strength follows the
-            // accessibility slider), then the charcoal tint on top.
-            renderBlurredBackground(partialTick);
-            Render2D.fillRect(g, 0, 0, this.width, this.height, Theme.INWORLD_OVERLAY);
+            // accessibility slider), then the charcoal tint on top. Performance
+            // Mode skips the blur pass entirely and deepens the tint instead.
+            if (!Theme.reducedEffects()) {
+                renderBlurredBackground(partialTick);
+                Render2D.fillRect(g, 0, 0, this.width, this.height, Theme.INWORLD_OVERLAY);
+            } else {
+                Render2D.fillRect(g, 0, 0, this.width, this.height, 0xD00E0E10);
+            }
         } else {
             Render2D.fillRect(g, 0, 0, this.width, this.height, Theme.BACKGROUND);
         }
