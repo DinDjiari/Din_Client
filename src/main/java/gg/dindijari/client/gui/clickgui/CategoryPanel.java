@@ -135,7 +135,7 @@ public final class CategoryPanel extends Panel {
                 Render2D.fillRounded(g, bx, by, w, infoRowHeight() - Theme.px(4), Theme.px(4),
                         ColorUtil.withAlpha(Theme.BUTTON_HOVER, hover ? 220 : 120));
                 Fonts.drawScaled(g, embeddiumRow, bx + Theme.px(6), by + Theme.px(6),
-                        0.75F, Theme.TEXT_SECONDARY, false);
+                        0.66F, Theme.TEXT_SECONDARY, false);
                 Fonts.drawScaled(g, downloadLabel, bx + Theme.px(6), by + Theme.px(24),
                         0.75F, Theme.accent(), false);
             }

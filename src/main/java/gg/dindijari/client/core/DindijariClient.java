@@ -102,7 +102,10 @@ public final class DindijariClient {
         configManager.bind(moduleManager.getModules());
         configManager.load();
         if (firstLaunch) {
-            muteMusicOnFirstLaunch();
+            // Options are not available yet during mod construction; apply on
+            // the first client tick instead (exactly once).
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                    DindijariClient::muteMusicOnFirstTick);
         }
 
         moduleManager.registerEvents();
@@ -115,18 +118,30 @@ public final class DindijariClient {
         LOGGER.info("{} ready", MOD_NAME);
     }
 
+    /** One-shot guard for the first-launch music mute. */
+    private static boolean musicMuteApplied;
+
     /**
      * Sets the vanilla Music volume to 0 exactly once — on the very first
-     * launch, before any config exists. Later launches never touch it; the
+     * launch, before any config existed. Later launches never touch it; the
      * "Music" module in the Click GUI (or the vanilla slider) turns it back
-     * on. Documented in the README.
+     * on. Documented in the README. Runs on the first client tick because
+     * options are not yet constructed during mod loading.
+     *
+     * @param event the client tick
      */
-    private static void muteMusicOnFirstLaunch() {
-        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-        if (minecraft != null && minecraft.options != null) {
-            minecraft.options.getSoundSourceOptionInstance(
-                    net.minecraft.sounds.SoundSource.MUSIC).set(0.0);
-            LOGGER.info("First launch: vanilla music volume set to 0 (re-enable via the Music module)");
+    private static void muteMusicOnFirstTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (musicMuteApplied) {
+            return;
         }
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        if (minecraft == null || minecraft.options == null) {
+            return;
+        }
+        musicMuteApplied = true;
+        minecraft.options.getSoundSourceOptionInstance(
+                net.minecraft.sounds.SoundSource.MUSIC).set(0.0);
+        minecraft.options.save();
+        LOGGER.info("First launch: vanilla music volume set to 0 (re-enable via the Music module)");
     }
 }
