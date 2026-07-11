@@ -4,7 +4,6 @@ import gg.dindijari.client.core.Services;
 import gg.dindijari.client.gui.screen.ThemedScreen;
 import gg.dindijari.client.gui.widget.ThemedTextField;
 import gg.dindijari.client.module.Category;
-import gg.dindijari.client.module.modules.ThemeModule;
 import gg.dindijari.client.render.Fonts;
 import gg.dindijari.client.render.Theme;
 import net.minecraft.client.gui.GuiGraphics;
@@ -24,7 +23,7 @@ import java.util.Map;
  *
  * <p>Layout: a centred search bar (live module filter) with a
  * "Right-Shift to close" hint, one draggable {@link CategoryPanel} per
- * {@link Category} and the {@link ThemeEditorPanel}, all floating over the
+ * {@link Category} (the Theme Editor lives in the Client category), all floating over the
  * blurred/dimmed game (or the charcoal backdrop at the main menu). Panel
  * positions persist for the session; module expansion state persists with
  * them. Right&nbsp;Shift or Esc closes the screen.
@@ -39,7 +38,6 @@ public final class ClickGuiScreen extends ThemedScreen {
     private final List<CategoryPanel> categoryPanels = new ArrayList<>();
     private final Component hint = Fonts.ui("Right-Shift to close");
 
-    private ThemeEditorPanel themeEditor;
     private Panel activePanel;
     private ThemedTextField search;
 
@@ -78,9 +76,6 @@ public final class ClickGuiScreen extends ThemedScreen {
             categoryPanels.add(panel);
             toPlace.add(panel);
         }
-        themeEditor = new ThemeEditorPanel(
-                (ThemeModule) Services.modules().getModule("Theme"), 0, 0);
-        toPlace.add(themeEditor);
         BrandingPanel brandingPanel = new BrandingPanel(
                 (gg.dindijari.client.module.modules.BrandingModule)
                         Services.modules().getModule("Branding"), 0, 0);
@@ -148,9 +143,6 @@ public final class ClickGuiScreen extends ThemedScreen {
             if (activePanel instanceof CategoryPanel cp && cp.settingsDragged(mx)) {
                 return true;
             }
-            if (activePanel instanceof ThemeEditorPanel te && te.settingsDragged(mx)) {
-                return true;
-            }
             if (activePanel instanceof BrandingPanel bp && bp.settingsDragged(mx)) {
                 return true;
             }
@@ -167,8 +159,6 @@ public final class ClickGuiScreen extends ThemedScreen {
             panel.mouseReleased();
             if (panel instanceof CategoryPanel cp) {
                 cp.settingsReleased();
-            } else if (panel instanceof ThemeEditorPanel te) {
-                te.settingsReleased();
             } else if (panel instanceof BrandingPanel bp) {
                 bp.settingsReleased();
             }

@@ -26,8 +26,6 @@ public final class BrandingModule extends Module {
     public enum Source {
         /** The currently logged-in account name, read live. */
         PLAYER_NAME,
-        /** The static client name. */
-        CLIENT_NAME,
         /** Free text from the custom field. */
         CUSTOM
     }
@@ -66,9 +64,9 @@ public final class BrandingModule extends Module {
     private final BooleanSetting subtitleVisible = new BooleanSetting(
             "Subtitle Visible", "Show the subtitle line.", true);
     private final EnumSetting<Source> subtitleSource = new EnumSetting<>(
-            "Subtitle Source", "What the subtitle shows.", Source.CLIENT_NAME);
+            "Subtitle Source", "What the subtitle shows.", Source.CUSTOM);
     private final StringSetting subtitleCustom = new StringSetting(
-            "Subtitle Text", "Custom subtitle text.", "");
+            "Subtitle Text", "Custom subtitle text.", "CLIENT");
     private final EnumSetting<BrandFont> subtitleFont = new EnumSetting<>(
             "Subtitle Font", "Typeface of the subtitle.", BrandFont.INTER);
     private final ColorSetting subtitleColor = new ColorSetting(
@@ -103,7 +101,7 @@ public final class BrandingModule extends Module {
      * @return the text the big title should show
      */
     public String titleText() {
-        return resolve(titleSource.get(), titleCustom.get(), "DINDIJARI", titleUppercase.get());
+        return resolve(titleSource.get(), titleCustom.get(), titleUppercase.get());
     }
 
     /**
@@ -112,14 +110,15 @@ public final class BrandingModule extends Module {
      * @return the text the subtitle should show
      */
     public String subtitleText() {
-        return resolve(subtitleSource.get(), subtitleCustom.get(), "CLIENT", subtitleUppercase.get());
+        return resolve(subtitleSource.get(), subtitleCustom.get(), subtitleUppercase.get());
     }
 
-    private static String resolve(Source source, String custom, String clientName, boolean uppercase) {
+    private static String resolve(Source source, String custom, boolean uppercase) {
         String text = switch (source) {
             case PLAYER_NAME -> Minecraft.getInstance().getUser().getName();
-            case CLIENT_NAME -> clientName;
-            case CUSTOM -> custom.isBlank() ? clientName : custom;
+            // Blank custom text falls back to the player name so the line is
+            // never empty.
+            case CUSTOM -> custom.isBlank() ? Minecraft.getInstance().getUser().getName() : custom;
         };
         return uppercase ? text.toUpperCase(Locale.ROOT) : text;
     }
