@@ -28,3 +28,6 @@ Thumbs.db
 # Local isolated-compilation verification artifacts (not part of the build)
 .verify-libs/
 .verify-out/
+
+# Ad-hoc packaged artifacts (the real mod jar is produced under build/libs)
+dist/
