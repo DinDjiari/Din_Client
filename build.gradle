@@ -1,0 +1,75 @@
+plugins {
+    id 'java'
+    // ModDevGradle 2.x — the NeoForge development plugin.
+    id 'net.neoforged.moddev' version '2.0.93'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+neoForge {
+    // Pulled from gradle.properties; requires maven.neoforged.net at build time.
+    version = neo_version
+
+    // Client-only mod: only a client run is configured.
+    runs {
+        client {
+            client()
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    // Gson and SLF4J are supplied by the Minecraft/NeoForge runtime, so no
+    // additional runtime dependencies are needed for the framework.
+}
+
+// Expand mod metadata placeholders in neoforge.mods.toml at build time.
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version: minecraft_version,
+            neo_version      : neo_version,
+            mod_id           : mod_id,
+            mod_name         : mod_name,
+            mod_version      : mod_version,
+            mod_license      : mod_license,
+            mod_authors      : mod_authors,
+            mod_description  : mod_description,
+    ]
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+// Reproducible archives.
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}

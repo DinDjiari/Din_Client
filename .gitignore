@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# NeoForge / ModDevGradle run + generated directories
+run/
+runs/
+.neoforge/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+out/
+.eclipse/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local isolated-compilation verification artifacts (not part of the build)
+.verify-libs/
+.verify-out/
