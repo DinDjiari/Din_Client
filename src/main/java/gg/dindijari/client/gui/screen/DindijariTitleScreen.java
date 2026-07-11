@@ -105,11 +105,13 @@ public final class DindijariTitleScreen extends ThemedScreen {
 
         Fonts.drawCentered(g, wordmarkSub, cx, underlineY + Theme.px(14), 1.0F, Theme.TEXT_SECONDARY, false);
 
-        // Footer: player name primary, version line smaller and secondary.
+        // Footer, bottom-left: player name as larger primary white text with
+        // the version line as smaller secondary grey (#A0A0A8) underneath.
         float pad = Theme.px(Theme.GRID);
-        Fonts.draw(g, playerName, pad, this.height - 9 - pad, Theme.TEXT_PRIMARY, false);
-        Fonts.drawScaled(g, versionLine, pad + Fonts.width(playerName) + Theme.px(8),
-                this.height - 9 - pad + 1.5F, 0.8F, Theme.TEXT_SECONDARY, false);
+        float versionY = this.height - pad - 9 * 0.75F;
+        float nameY = versionY - Theme.px(6) - 9 * 1.1F;
+        Fonts.drawScaled(g, playerName, pad, nameY, 1.1F, Theme.TEXT_PRIMARY, false);
+        Fonts.drawScaled(g, versionLine, pad, versionY, 0.75F, Theme.TEXT_SECONDARY, false);
     }
 
     @Override

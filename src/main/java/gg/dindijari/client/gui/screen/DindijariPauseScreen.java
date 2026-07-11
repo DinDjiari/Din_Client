@@ -97,10 +97,13 @@ public final class DindijariPauseScreen extends ThemedScreen {
         Fonts.drawCentered(g, header, panelX + panelW / 2.0F, panelY + pad + Theme.px(8),
                 1.25F, Theme.TEXT_PRIMARY, false);
 
+        // Footer, bottom-left: player name as larger primary white text with
+        // the version line as smaller secondary grey (#A0A0A8) underneath.
         float edge = Theme.px(Theme.GRID);
-        Fonts.draw(g, playerName, edge, this.height - 9 - edge, Theme.TEXT_PRIMARY, false);
-        Fonts.drawScaled(g, versionLine, edge + Fonts.width(playerName) + Theme.px(8),
-                this.height - 9 - edge + 1.5F, 0.8F, Theme.TEXT_SECONDARY, false);
+        float versionY = this.height - edge - 9 * 0.75F;
+        float nameY = versionY - Theme.px(6) - 9 * 1.1F;
+        Fonts.drawScaled(g, playerName, edge, nameY, 1.1F, Theme.TEXT_PRIMARY, false);
+        Fonts.drawScaled(g, versionLine, edge, versionY, 0.75F, Theme.TEXT_SECONDARY, false);
     }
 
     @Override
