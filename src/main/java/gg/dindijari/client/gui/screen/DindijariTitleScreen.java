@@ -27,7 +27,7 @@ import net.minecraft.network.chat.Component;
  */
 public final class DindijariTitleScreen extends ThemedScreen {
 
-    private final Component wordmark = Fonts.ui("DINDIJARI");
+    private final Component wordmark = Fonts.display("DINDIJARI");
     private final Component wordmarkSub = Fonts.ui("C L I E N T");
     private final Component versionLine = Fonts.ui("dindijari client v" + DindijariClient.MOD_VERSION);
 
@@ -89,14 +89,15 @@ public final class DindijariTitleScreen extends ThemedScreen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
 
-        // Wordmark with accent underline, per the design reference.
+        // Wordmark with accent underline, per the design reference. Drawn at
+        // scale 1 in the display-size face so glyph rasters are never
+        // upscaled (crisp up to GUI scale 4 / 4K).
         float cx = this.width / 2.0F;
-        float logoScale = 3.0F;
         float logoY = this.height / 4.0F - Theme.px(52);
-        Fonts.drawCentered(g, wordmark, cx, logoY, logoScale, Theme.TEXT_PRIMARY, false);
+        Fonts.drawCentered(g, wordmark, cx, logoY, 1.0F, Theme.TEXT_PRIMARY, false);
 
-        float logoW = Fonts.width(wordmark) * logoScale;
-        float underlineY = Theme.snap(logoY + 9 * logoScale + Theme.px(6));
+        float logoW = Fonts.width(wordmark);
+        float underlineY = Theme.snap(logoY + 27 + Theme.px(6));
         Render2D.fillRounded(g, cx - logoW / 2, underlineY, logoW, Theme.px(4), Theme.px(2), Theme.accent());
 
         Fonts.drawCentered(g, wordmarkSub, cx, underlineY + Theme.px(14), 1.0F, Theme.TEXT_SECONDARY, false);

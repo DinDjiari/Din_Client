@@ -33,11 +33,23 @@ public final class Fonts {
     public static final ResourceLocation MONO =
             ResourceLocation.fromNamespaceAndPath(DindijariClient.MOD_ID, "jetbrains_mono");
 
+    /**
+     * Font id of the display-size Inter face (30 GUI units, oversampled 4x =
+     * 120&nbsp;px glyph rasters). Used for the wordmark and loading-screen logo
+     * so large text is rasterised at (or above) its physical pixel size up to
+     * GUI scale 4 / 4K — never upscaled from body-text rasters.
+     */
+    public static final ResourceLocation INTER_DISPLAY =
+            ResourceLocation.fromNamespaceAndPath(DindijariClient.MOD_ID, "inter_display");
+
     /** Reusable style carrying the Inter font. */
     public static final Style INTER_STYLE = Style.EMPTY.withFont(INTER);
 
     /** Reusable style carrying the JetBrains Mono font. */
     public static final Style MONO_STYLE = Style.EMPTY.withFont(MONO);
+
+    /** Reusable style carrying the display-size Inter font. */
+    public static final Style DISPLAY_STYLE = Style.EMPTY.withFont(INTER_DISPLAY);
 
     private Fonts() {
     }
@@ -62,6 +74,17 @@ public final class Fonts {
      */
     public static MutableComponent mono(String text) {
         return Component.literal(text).withStyle(MONO_STYLE);
+    }
+
+    /**
+     * Builds a component in the display-size Inter face (for wordmarks and
+     * hero text; draw at scale 1 — the glyphs are already ~3x body size).
+     *
+     * @param text the literal text
+     * @return the styled component
+     */
+    public static MutableComponent display(String text) {
+        return Component.literal(text).withStyle(DISPLAY_STYLE);
     }
 
     /**
