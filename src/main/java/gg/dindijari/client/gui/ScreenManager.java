@@ -79,6 +79,21 @@ public final class ScreenManager {
         NeoForge.EVENT_BUS.addListener(this::onBackgroundRendered);
         NeoForge.EVENT_BUS.addListener(this::onKey);
         NeoForge.EVENT_BUS.addListener(this::onClientTick);
+        // Entrance/exit transitions for themed screens. Render.Pre/Post bracket
+        // the whole screen render (including tooltips); the Post listener runs
+        // at HIGH priority so overlays other listeners draw (e.g. toasts) are
+        // not caught in the screen's transform/fade.
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ScreenEvent.Render.Pre event) -> {
+            if (event.getScreen() instanceof gg.dindijari.client.gui.screen.ThemedScreen themed) {
+                themed.beginTransitionFrame(event.getGuiGraphics());
+            }
+        });
+        NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.HIGH,
+                (net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event) -> {
+                    if (event.getScreen() instanceof gg.dindijari.client.gui.screen.ThemedScreen themed) {
+                        themed.endTransitionFrame(event.getGuiGraphics());
+                    }
+                });
         LOGGER.info("Screen manager initialized (dev auto-open: {})", !FMLLoader.isProduction());
     }
 
@@ -193,12 +208,45 @@ public final class ScreenManager {
     private String connectLineText;
     private net.minecraft.network.chat.Component connectLine;
 
+    /** Set once the previous session's crash has been presented this launch. */
+    private boolean crashScreenShown;
+
+    /** Set once the Sodium recommendation has been presented this launch. */
+    private boolean sodiumPromptShown;
+
     private void onClientTick(ClientTickEvent.Post event) {
-        if (!devSettingsPending) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (!(minecraft.screen instanceof DindijariTitleScreen title)) {
             return;
         }
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen instanceof DindijariTitleScreen title) {
+
+        // Highest priority: the previous session's crash (shown at most once).
+        if (!crashScreenShown) {
+            crashScreenShown = true;
+            var crash = gg.dindijari.client.crash.CrashWatcher.previousCrash();
+            var assistant = (gg.dindijari.client.module.modules.client.CrashAssistantModule)
+                    gg.dindijari.client.core.Services.modules().getModule("Crash Assistant");
+            if (crash != null && assistant != null && assistant.crashScreen().get()) {
+                LOGGER.info("Previous session crashed — showing the crash-report screen");
+                minecraft.setScreen(
+                        new gg.dindijari.client.gui.screen.CrashReportScreen(title, crash));
+                return;
+            }
+        }
+
+        // Then the Sodium recommendation (missing, not suppressed, once per launch).
+        if (!sodiumPromptShown) {
+            sodiumPromptShown = true;
+            if (!gg.dindijari.client.util.SodiumIntegration.isLoaded()
+                    && !gg.dindijari.client.core.ClientState.getBool(
+                    gg.dindijari.client.gui.screen.SodiumRecommendationScreen.DISMISS_FLAG, false)) {
+                minecraft.setScreen(
+                        new gg.dindijari.client.gui.screen.SodiumRecommendationScreen(title));
+                return;
+            }
+        }
+
+        if (devSettingsPending) {
             devSettingsPending = false;
             devSettingsShown = true;
             LOGGER.info("Dev environment detected — auto-opening Client Settings");

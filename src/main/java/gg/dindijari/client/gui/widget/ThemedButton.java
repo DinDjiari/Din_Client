@@ -1,14 +1,15 @@
 package gg.dindijari.client.gui.widget;
 
+import gg.dindijari.client.core.ClientSounds;
 import gg.dindijari.client.render.ColorUtil;
 import gg.dindijari.client.render.Fonts;
 import gg.dindijari.client.render.Render2D;
 import gg.dindijari.client.render.Theme;
 import gg.dindijari.client.util.animation.Animation;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -30,9 +31,11 @@ public class ThemedButton extends AbstractWidget {
 
     private final Runnable onPress;
     private final Animation hover;
+    private final Animation press;
     private final boolean accent;
     private final int labelColorOverride;
     private Component label;
+    private boolean wasHovered;
 
     /**
      * Creates a standard flat themed button.
@@ -85,6 +88,7 @@ public class ThemedButton extends AbstractWidget {
         this.labelColorOverride = labelColor;
         this.onPress = onPress;
         this.hover = new Animation(0.0, Theme.hoverMs(), Theme.HOVER_EASING);
+        this.press = new Animation(0.0, Theme.hoverMs() * 2, Theme.HOVER_EASING);
     }
 
     /**
@@ -99,8 +103,15 @@ public class ThemedButton extends AbstractWidget {
 
     @Override
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        boolean hoveredNow = isHovered() && this.active;
+        if (hoveredNow && !wasHovered) {
+            ClientSounds.hover();
+        }
+        wasHovered = hoveredNow;
+
         hover.animateTo(isHoveredOrFocused() && this.active ? 1.0 : 0.0);
         float t = hover.valueF();
+        float pressT = Theme.animationsEnabled() ? press.valueF() : 0.0F;
         float radius = Theme.px(Theme.BUTTON_RADIUS);
 
         int fill;
@@ -120,6 +131,10 @@ public class ThemedButton extends AbstractWidget {
             fill = ColorUtil.scaleAlpha(fill, 0.5F);
             textColor = Theme.TEXT_SECONDARY;
         }
+        if (pressT > 0.01F) {
+            // Short press flash fading back out after a click.
+            fill = ColorUtil.lerp(fill, 0xFFFFFFFF, pressT * (accent ? 0.35F : 0.18F));
+        }
         Render2D.fillRounded(g, getX(), getY(), this.width, this.height, radius, fill);
 
         float textY = getY() + (this.height - 9) / 2.0F + 0.5F;
@@ -133,18 +148,33 @@ public class ThemedButton extends AbstractWidget {
 
     @Override
     public void onClick(double mouseX, double mouseY) {
+        flashPress();
         this.onPress.run();
+    }
+
+    @Override
+    public void playDownSound(SoundManager manager) {
+        // The client's own click instead of the vanilla button sound.
+        ClientSounds.click();
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         // Enter / space / numpad-enter activate the focused button.
         if (this.active && this.visible && (keyCode == 257 || keyCode == 32 || keyCode == 335)) {
-            playDownSound(Minecraft.getInstance().getSoundManager());
+            ClientSounds.click();
+            flashPress();
             this.onPress.run();
             return true;
         }
         return false;
+    }
+
+    private void flashPress() {
+        if (Theme.animationsEnabled()) {
+            press.snapTo(1.0);
+            press.animateTo(0.0);
+        }
     }
 
     @Override

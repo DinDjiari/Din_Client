@@ -1,5 +1,7 @@
 package gg.dindijari.client.gui.clickgui;
 
+import gg.dindijari.client.core.ClientSounds;
+import gg.dindijari.client.gui.screen.TextInputScreen;
 import gg.dindijari.client.render.ColorUtil;
 import gg.dindijari.client.render.Fonts;
 import gg.dindijari.client.render.Render2D;
@@ -10,6 +12,8 @@ import gg.dindijari.client.setting.EnumSetting;
 import gg.dindijari.client.setting.KeybindSetting;
 import gg.dindijari.client.setting.NumberSetting;
 import gg.dindijari.client.setting.Setting;
+import gg.dindijari.client.setting.StringSetting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -32,7 +36,9 @@ import java.util.Map;
  *   <li>{@link EnumSetting} — label + value chip (click cycles, right-click
  *       cycles backwards);</li>
  *   <li>{@link KeybindSetting} — label + key chip; click, then press a key to
- *       rebind (Esc unbinds).</li>
+ *       rebind (Esc unbinds);</li>
+ *   <li>{@link StringSetting} — label + value chip; click opens the themed
+ *       text-input dialog.</li>
  * </ul>
  *
  * <p>Row layout is pure math shared by render and hit-testing; label
@@ -65,6 +71,10 @@ final class SettingRows {
         }
         if (setting instanceof ColorSetting) {
             return Theme.px(42);
+        }
+        if (setting instanceof StringSetting) {
+            // Two-line layout: small label above a full-width value chip.
+            return Theme.px(40);
         }
         return Theme.px(26);
     }
@@ -138,6 +148,15 @@ final class SettingRows {
             float chipX = x + w - chipW;
             Render2D.fillRounded(g, chipX, y + Theme.px(4), chipW, Theme.px(18), Theme.px(4), Theme.BUTTON);
             Fonts.drawScaled(g, value, chipX + Theme.px(8), y + Theme.px(9), 0.9F, Theme.accent(), false);
+        } else if (s instanceof StringSetting str) {
+            // Two-line layout like sliders: small label above, full-width chip
+            // below (click opens the themed text-input dialog).
+            Fonts.drawScaled(g, label, x, y + Theme.px(3), 0.8F, Theme.TEXT_SECONDARY, false);
+            float chipY = y + Theme.px(16);
+            Render2D.fillRounded(g, x, chipY, w, Theme.px(18), Theme.px(4), Theme.BUTTON);
+            Component value = valueComponent(str, chipText(str.get(), w));
+            Fonts.drawScaled(g, value, x + Theme.px(8), chipY + Theme.px(5), 0.85F,
+                    Theme.TEXT_PRIMARY, false);
         } else if (s instanceof KeybindSetting key) {
             Fonts.drawScaled(g, label, x, y + Theme.px(9), 0.9F, Theme.TEXT_PRIMARY, false);
             Component value = listening == key ? valueComponent(key, "press a key")
@@ -191,6 +210,17 @@ final class SettingRows {
         }
         if (s instanceof BooleanSetting bool) {
             bool.toggle();
+            ClientSounds.toggle(bool.get());
+            return true;
+        }
+        if (s instanceof StringSetting str) {
+            ClientSounds.click();
+            Minecraft minecraft = Minecraft.getInstance();
+            minecraft.setScreen(new TextInputScreen(minecraft.screen, str.getName(),
+                    str.getDescription(), str.get(), value -> {
+                str.set(value);
+                valueTexts.remove(str);
+            }));
             return true;
         }
         if (s instanceof ColorSetting color) {
@@ -215,15 +245,27 @@ final class SettingRows {
             } else {
                 en.cycle();
             }
+            ClientSounds.click();
             valueTexts.remove(en);
             return true;
         }
         if (s instanceof KeybindSetting key) {
             listening = listening == key ? null : key;
+            ClientSounds.click();
             valueTexts.remove(key);
             return true;
         }
         return false;
+    }
+
+    /** Chip display text for a string value: placeholder when empty, ellipsized to the chip width. */
+    private static String chipText(String value, float chipWidth) {
+        if (value.isEmpty()) {
+            return "(empty)";
+        }
+        // ~4.9 GUI units per glyph at 0.85 scale; keep inside the chip padding.
+        int max = Math.max(6, (int) ((chipWidth - Theme.px(16)) / 4.9F));
+        return value.length() > max ? value.substring(0, max - 1) + "…" : value;
     }
 
     /**

@@ -1,0 +1,30 @@
+{
+  "ui_hover": {
+    "category": "master",
+    "sounds": [{"name": "dindijariclient:ui_hover", "stream": false}]
+  },
+  "ui_click": {
+    "category": "master",
+    "sounds": [{"name": "dindijariclient:ui_click", "stream": false}]
+  },
+  "toggle_on": {
+    "category": "master",
+    "sounds": [{"name": "dindijariclient:toggle_on", "stream": false}]
+  },
+  "toggle_off": {
+    "category": "master",
+    "sounds": [{"name": "dindijariclient:toggle_off", "stream": false}]
+  },
+  "notify": {
+    "category": "master",
+    "sounds": [{"name": "dindijariclient:notify", "stream": false}]
+  },
+  "dialog_open": {
+    "category": "master",
+    "sounds": [{"name": "dindijariclient:dialog_open", "stream": false}]
+  },
+  "error": {
+    "category": "master",
+    "sounds": [{"name": "dindijariclient:error", "stream": false}]
+  }
+}

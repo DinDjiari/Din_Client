@@ -61,6 +61,35 @@ public final class Theme {
         config = module;
     }
 
+    /** Interface module (animations/sounds), installed at start-up; null until then. */
+    private static gg.dindijari.client.module.modules.client.InterfaceModule interfaceConfig;
+
+    /**
+     * Binds the Interface module so {@link #animationsEnabled()} reflects its
+     * "UI Animations" master toggle. Called once during mod construction.
+     *
+     * @param module the interface module
+     */
+    public static void installInterface(
+            gg.dindijari.client.module.modules.client.InterfaceModule module) {
+        interfaceConfig = module;
+    }
+
+    /**
+     * Whether UI animations (screen/dialog transitions, toggle ripples, toast
+     * slides) should run. False while Performance Mode is enabled or the
+     * "UI Animations" master toggle is off; effects then snap to their final
+     * state instead of transitioning.
+     *
+     * @return {@code true} while UI animations are enabled
+     */
+    public static boolean animationsEnabled() {
+        if (reducedEffects()) {
+            return false;
+        }
+        return interfaceConfig == null || interfaceConfig.uiAnimations().get();
+    }
+
     // ------------------------------------------------------------------
     // Colour tokens
     // ------------------------------------------------------------------

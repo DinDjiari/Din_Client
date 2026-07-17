@@ -188,6 +188,62 @@ Kept vanilla deliberately:
   not cover.
 
 
+## Version 2.0.0 notes
+
+### Sodium coexistence
+
+Sodium is an *optional* dependency detected purely by mod id — the client
+never compiles against or bundles Sodium code, so `gradle build` is identical
+with and without it (`-PwithSodium` adds the Modrinth artifact
+`maven.modrinth:sodium:mc1.21.1-0.8.12-neoforge` to the dev runtime for
+coexistence testing). The client ships **no mixins** and draws exclusively
+through the vanilla `GuiGraphics`/`RenderType.gui()` pipeline, which Sodium's
+chunk-rendering optimizations do not touch, so there is no mixin or GUI/HUD
+conflict surface by construction.
+
+### Window title & icon (Branding)
+
+- The custom **title** is applied via `glfwSetWindowTitle` and re-applied
+  every two seconds because vanilla rewrites the caption on world join/leave.
+- The custom **icon** is applied at startup *and* immediately when picked
+  (`glfwSetWindowIcon`, the same mechanism vanilla uses at boot) — no restart
+  needed on Windows and X11. **macOS** does not support runtime window icons
+  at all (GLFW limitation; vanilla has the same restriction — the Dock icon
+  comes from the launcher bundle), and **Wayland** compositors ignore
+  `glfwSetWindowIcon`. On those platforms the setting stores and converts the
+  icon but the OS keeps its own.
+- The converter decodes what STB decodes (PNG, JPEG, BMP, TGA, static GIF —
+  no WebP/AVIF in 1.21.1's bundled STB) and center-crops non-square images.
+  The file picker is the client's own themed screen; native OS dialogs would
+  require AWT, which is unsafe on macOS under `-XstartOnFirstThread`.
+
+### Crash assistant
+
+- When Minecraft hard-crashes, the render pipeline is gone — an overlay *at
+  crash time* is not possible. The crash is therefore recorded (chained
+  uncaught-exception handler + a shutdown-hook scan of `crash-reports/` for
+  files created during the session) and the themed crash screen is shown on
+  the **next** start. Render-thread crashes never reach an uncaught handler
+  (vanilla catches them), but they always write a report file, which the scan
+  catches. A `kill -9`/power loss cannot run shutdown hooks; if vanilla wrote
+  a report file first it is still picked up on the next session's scan only if
+  the JVM got that far — otherwise nothing can be recorded, by nature.
+- The **AI analysis runs locally** through the user's own Ollama install
+  (default `http://localhost:11434`, model `llama3.2`; both are Client
+  Settings). The crash text is sent only to that user-configured URL — nothing
+  leaves the machine unless the user points the URL at a remote host
+  themselves. If Ollama is unreachable, the model is missing, or the request
+  times out, the screen shows the real error with a hint
+  (`ollama serve` / `ollama pull <model>`) — analysis is never faked.
+
+### UI sounds
+
+All seven OGG files under `assets/dindijariclient/sounds/` are synthesized
+from scratch by `tools/make_sounds.py` (sine/sweep partials + envelopes) and
+released as **CC0** — no recorded or third-party material. They play as UI
+sounds on the master category via the vanilla sound engine, so the vanilla
+master volume always applies on top of the client's own UI volume slider.
+
 ## Mods screen, tablist and icon set status
 
 - The **Mods screen** is themed (searchable cards, detail pane with version /

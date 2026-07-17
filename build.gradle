@@ -20,6 +20,18 @@ java {
 
 repositories {
     mavenCentral()
+    // Modrinth maven, used only for the optional Sodium runtime dependency.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter {
+            includeGroup 'maven.modrinth'
+        }
+    }
 }
 
 neoForge {
@@ -43,6 +55,13 @@ neoForge {
 dependencies {
     // Gson and SLF4J are supplied by the Minecraft/NeoForge runtime, so no
     // additional runtime dependencies are needed for the framework.
+
+    // Optional: drop Sodium into the dev runtime to verify coexistence
+    // (`gradle build -PwithSodium` / `gradle runClient -PwithSodium`).
+    // The client never compiles against Sodium — detection is by mod id only.
+    if (project.hasProperty('withSodium')) {
+        additionalRuntimeClasspath 'maven.modrinth:sodium:mc1.21.1-0.8.12-neoforge'
+    }
 }
 
 // Expand mod metadata placeholders in neoforge.mods.toml at build time.

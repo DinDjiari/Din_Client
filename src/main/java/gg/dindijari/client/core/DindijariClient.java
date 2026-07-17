@@ -1,10 +1,16 @@
 package gg.dindijari.client.core;
 
+import gg.dindijari.client.branding.WindowBranding;
 import gg.dindijari.client.config.ConfigManager;
+import gg.dindijari.client.crash.CrashWatcher;
 import gg.dindijari.client.gui.ScreenManager;
+import gg.dindijari.client.gui.notify.Notifications;
 import gg.dindijari.client.module.ModuleManager;
 import gg.dindijari.client.module.modules.SprintModule;
 import gg.dindijari.client.module.modules.ThemeModule;
+import gg.dindijari.client.module.modules.client.BrandingModule;
+import gg.dindijari.client.module.modules.client.CrashAssistantModule;
+import gg.dindijari.client.module.modules.client.InterfaceModule;
 import gg.dindijari.client.module.modules.performance.FpsLimiterModule;
 import gg.dindijari.client.module.modules.performance.FpsPresetsModule;
 import gg.dindijari.client.module.modules.performance.LowParticlesModule;
@@ -53,8 +59,8 @@ public final class DindijariClient {
     /** The human readable mod name. */
     public static final String MOD_NAME = "Dindijari Client";
 
-    /** The mod version shown in UI footers; kept in sync with gradle.properties. */
-    public static final String MOD_VERSION = "0.1.0";
+    /** The mod version shown in UI footers; kept in sync with gradle.properties and the README. */
+    public static final String MOD_VERSION = "2.0.0";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
@@ -90,10 +96,27 @@ public final class DindijariClient {
                 new ServerIpHideModule(),
                 new AutoReconnectModule());
 
+        InterfaceModule interfaceModule = new InterfaceModule();
+        Theme.installInterface(interfaceModule);
+        ClientSounds.install(interfaceModule);
+        BrandingModule brandingModule = new BrandingModule();
+        CrashAssistantModule crashAssistant = new CrashAssistantModule();
+        moduleManager.register(interfaceModule, brandingModule, crashAssistant);
+
+        // UI sound events registered on the mod bus (assets/dindijariclient/sounds).
+        ClientSounds.SOUNDS.register(modEventBus);
+
         Path configRoot = FMLPaths.CONFIGDIR.get().resolve(MOD_ID);
+        ClientState.init(configRoot);
         ConfigManager configManager = new ConfigManager(configRoot);
         configManager.bind(moduleManager.getModules());
         configManager.load();
+
+        // Crash hooks + the previous session's crash record (if any).
+        CrashWatcher.install(FMLPaths.GAMEDIR.get(), configRoot);
+        // Window caption/icon runtime (re-applies the persisted branding on launch).
+        WindowBranding.init(brandingModule, configRoot);
+        Notifications.registerEvents();
 
         moduleManager.registerEvents();
         new ScreenManager().registerEvents();

@@ -27,3 +27,14 @@ type = "required"
 versionRange = "[${minecraft_version},1.22)"
 ordering = "NONE"
 side = "CLIENT"
+
+# Sodium (Modrinth project AANobbMI) is recommended for significantly better
+# FPS and ships native NeoForge builds for 1.21.1 (mc1.21.1-0.8.x-neoforge).
+# Strictly optional: the client only detects it via ModList and never touches
+# its code, so everything works identically without it.
+[[dependencies.${mod_id}]]
+modId = "sodium"
+type = "optional"
+versionRange = "[0.6,)"
+ordering = "NONE"
+side = "CLIENT"

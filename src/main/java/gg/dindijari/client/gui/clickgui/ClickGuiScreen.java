@@ -40,6 +40,7 @@ public final class ClickGuiScreen extends ThemedScreen {
     private final Component hint = Fonts.ui("Right-Shift to close");
 
     private ThemeEditorPanel themeEditor;
+    private BrandingPanel branding;
     private Panel activePanel;
     private ThemedTextField search;
 
@@ -81,6 +82,10 @@ public final class ClickGuiScreen extends ThemedScreen {
         themeEditor = new ThemeEditorPanel(
                 (ThemeModule) Services.modules().getModule("Theme"), 0, 0);
         toPlace.add(themeEditor);
+        branding = new BrandingPanel(
+                (gg.dindijari.client.module.modules.client.BrandingModule)
+                        Services.modules().getModule("Branding"), 0, 0);
+        toPlace.add(branding);
 
         for (Panel panel : toPlace) {
             float[] saved = POSITIONS.get(panelKey(panel));
@@ -94,7 +99,9 @@ public final class ClickGuiScreen extends ThemedScreen {
                     cy += rowMaxH + margin;
                     rowMaxH = 0;
                 }
-                panel.setPosition(cx, cy);
+                // Clamp so a panel's header always stays on screen (small
+                // windows can otherwise push later rows out of reach).
+                panel.setPosition(cx, Math.min(cy, this.height - Theme.px(40)));
                 cx += panel.width() + margin;
                 rowMaxH = Math.max(rowMaxH, panel.height());
             }
@@ -145,6 +152,9 @@ public final class ClickGuiScreen extends ThemedScreen {
             if (activePanel instanceof ThemeEditorPanel te && te.settingsDragged(mx)) {
                 return true;
             }
+            if (activePanel instanceof BrandingPanel bp && bp.settingsDragged(mx)) {
+                return true;
+            }
             if (activePanel.mouseDragged(mx, my, this.width, this.height)) {
                 return true;
             }
@@ -160,6 +170,8 @@ public final class ClickGuiScreen extends ThemedScreen {
                 cp.settingsReleased();
             } else if (panel instanceof ThemeEditorPanel te) {
                 te.settingsReleased();
+            } else if (panel instanceof BrandingPanel bp) {
+                bp.settingsReleased();
             }
         }
         activePanel = null;
@@ -183,10 +195,13 @@ public final class ClickGuiScreen extends ThemedScreen {
 
     @Override
     public void onClose() {
+        if (isClosing()) {
+            return;
+        }
         for (Panel panel : panels) {
             POSITIONS.put(panelKey(panel), new float[]{panel.getX(), panel.getY()});
         }
-        this.minecraft.setScreen(parent);
+        animateClose(() -> this.minecraft.setScreen(parent));
     }
 
     private static String panelKey(Panel panel) {

@@ -1,5 +1,6 @@
 package gg.dindijari.client.gui.widget;
 
+import gg.dindijari.client.core.ClientSounds;
 import gg.dindijari.client.render.ColorUtil;
 import gg.dindijari.client.render.Render2D;
 import gg.dindijari.client.render.Theme;
@@ -7,6 +8,7 @@ import gg.dindijari.client.util.animation.Animation;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.BooleanSupplier;
@@ -71,9 +73,15 @@ public class ThemedToggle extends AbstractWidget {
     }
 
     @Override
+    public void playDownSound(SoundManager manager) {
+        // Rising tone for enabling, falling for disabling.
+        ClientSounds.toggle(!getter.getAsBoolean());
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.active && this.visible && (keyCode == 257 || keyCode == 32 || keyCode == 335)) {
-            playDownSound(net.minecraft.client.Minecraft.getInstance().getSoundManager());
+            ClientSounds.toggle(!getter.getAsBoolean());
             setter.accept(!getter.getAsBoolean());
             return true;
         }

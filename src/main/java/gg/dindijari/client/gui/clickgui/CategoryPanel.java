@@ -1,5 +1,6 @@
 package gg.dindijari.client.gui.clickgui;
 
+import gg.dindijari.client.core.ClientSounds;
 import gg.dindijari.client.core.Services;
 import gg.dindijari.client.module.Category;
 import gg.dindijari.client.module.Module;
@@ -9,6 +10,9 @@ import gg.dindijari.client.render.Render2D;
 import gg.dindijari.client.render.Theme;
 import gg.dindijari.client.setting.KeybindSetting;
 import gg.dindijari.client.setting.Setting;
+import gg.dindijari.client.util.SodiumIntegration;
+import gg.dindijari.client.util.animation.Animation;
+import gg.dindijari.client.util.animation.Easing;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
@@ -38,6 +42,17 @@ public final class CategoryPanel extends Panel {
     private final Map<Module, Component> names = new HashMap<>();
     private final Map<Module, List<Setting<?>>> visibleSettings = new HashMap<>();
     private final Component emptyLabel = Fonts.ui("No modules yet");
+
+    /** Accent glow flashed over a module row when it is toggled. */
+    private final Map<Module, Animation> toggleGlow = new HashMap<>();
+    /** Smooth expansion state (0..1) of each module's settings section. */
+    private final Map<String, Animation> expandAnim = new HashMap<>();
+
+    // Sodium recommendation row (Performance panel only).
+    private final Component sodiumLoaded = Fonts.ui("Sodium erkannt ✓");
+    private final Component sodiumMissing = Fonts.ui("Sodium nicht installiert —");
+    private final Component sodiumHint = Fonts.ui("empfohlen für beste FPS");
+    private final Component sodiumLink = Fonts.ui("Modrinth öffnen ↗");
 
     private String filter = "";
 
@@ -91,18 +106,45 @@ public final class CategoryPanel extends Panel {
         return Theme.px(27);
     }
 
+    /** Height of the Sodium status row (Performance panel only). */
+    private float infoRowHeight() {
+        if (category != Category.PERFORMANCE) {
+            return 0;
+        }
+        return SodiumIntegration.isLoaded() ? Theme.px(20) : Theme.px(46);
+    }
+
+    /** Animated expansion progress (0..1) for a module's settings section. */
+    private float expandProgress(Module m) {
+        boolean expanded = EXPANDED.contains(m.getName());
+        Animation anim = expandAnim.computeIfAbsent(m.getName(),
+                k -> new Animation(expanded ? 1.0 : 0.0, 200, Easing.CUBIC_OUT));
+        anim.animateTo(expanded ? 1.0 : 0.0);
+        if (!Theme.animationsEnabled()) {
+            anim.snapTo(expanded ? 1.0 : 0.0);
+        }
+        return anim.valueF();
+    }
+
+    /** Current (possibly mid-animation) height of a module's settings section. */
+    private float expandedHeight(Module m) {
+        float t = expandProgress(m);
+        if (t <= 0.001F) {
+            return 0;
+        }
+        return (rows.totalHeight(settingsOf(m)) + Theme.px(6)) * t;
+    }
+
     @Override
     protected float bodyHeight() {
         List<Module> modules = modules();
         if (modules.isEmpty()) {
-            return Theme.px(24);
+            return infoRowHeight() + Theme.px(24);
         }
-        float h = 0;
+        float h = infoRowHeight();
         for (Module m : modules) {
             h += moduleRowHeight();
-            if (EXPANDED.contains(m.getName())) {
-                h += rows.totalHeight(settingsOf(m)) + Theme.px(6);
-            }
+            h += expandedHeight(m);
         }
         return h;
     }
@@ -110,13 +152,13 @@ public final class CategoryPanel extends Panel {
     @Override
     protected void renderBody(GuiGraphics g, float bx, float by, int mouseX, int mouseY) {
         float w = width() - Theme.px(20);
+        float cy = by + renderInfoRow(g, bx, by, w, mouseX, mouseY);
         List<Module> modules = modules();
         if (modules.isEmpty()) {
-            Fonts.drawScaled(g, emptyLabel, bx + Theme.px(4), by + Theme.px(4),
+            Fonts.drawScaled(g, emptyLabel, bx + Theme.px(4), cy + Theme.px(4),
                     0.85F, Theme.TEXT_SECONDARY, false);
             return;
         }
-        float cy = by;
         for (Module m : modules) {
             float rh = moduleRowHeight();
             boolean hover = mouseX >= bx && mouseX <= bx + w && mouseY >= cy && mouseY < cy + rh;
@@ -124,20 +166,71 @@ public final class CategoryPanel extends Panel {
                 Render2D.fillRounded(g, bx, cy, w, rh - Theme.px(2), Theme.px(4),
                         ColorUtil.withAlpha(Theme.BUTTON_HOVER, 200));
             }
+            // Accent glow rippling out after a toggle.
+            Animation glow = toggleGlow.get(m);
+            if (glow != null) {
+                float gt = glow.valueF();
+                if (gt > 0.01F) {
+                    Render2D.fillRounded(g, bx, cy, w, rh - Theme.px(2), Theme.px(4),
+                            ColorUtil.withAlpha(Theme.accent(), (int) (gt * 70)));
+                    Render2D.outlineRounded(g, bx, cy, w, rh - Theme.px(2), Theme.px(4), 1.0F,
+                            ColorUtil.withAlpha(Theme.accent(), (int) (gt * 180)));
+                } else {
+                    toggleGlow.remove(m);
+                }
+            }
             Component name = names.computeIfAbsent(m, k -> Fonts.ui(k.getName()));
             Fonts.drawScaled(g, name, bx + Theme.px(6), cy + Theme.px(9), 0.9F, Theme.TEXT_PRIMARY, false);
             if (m.isToggleable()) {
                 SettingRows.drawToggle(g, bx + w - Theme.px(34), cy + Theme.px(6), m.isEnabled());
             }
             cy += rh;
-            if (EXPANDED.contains(m.getName())) {
-                float settingsH = rows.totalHeight(settingsOf(m));
-                Render2D.fillRounded(g, bx, cy - Theme.px(2), w, settingsH + Theme.px(6),
+            float sectionH = expandedHeight(m);
+            if (sectionH > 0) {
+                float fullH = rows.totalHeight(settingsOf(m)) + Theme.px(6);
+                boolean clipped = sectionH < fullH - 0.5F;
+                if (clipped) {
+                    g.enableScissor((int) Math.floor(bx), (int) Math.floor(cy - Theme.px(2)),
+                            (int) Math.ceil(bx + w), (int) Math.ceil(cy - Theme.px(2) + sectionH));
+                }
+                Render2D.fillRounded(g, bx, cy - Theme.px(2), w, fullH,
                         Theme.px(4), ColorUtil.withAlpha(0xFF0E0E10, 160));
                 rows.render(g, bx + Theme.px(8), cy + Theme.px(2), w - Theme.px(16), settingsOf(m));
-                cy += settingsH + Theme.px(6);
+                if (clipped) {
+                    g.disableScissor();
+                }
+                cy += sectionH;
             }
         }
+    }
+
+    /**
+     * Renders the Sodium status row at the top of the Performance panel:
+     * green confirmation when Sodium is loaded, otherwise the recommendation
+     * with a clickable Modrinth link.
+     *
+     * @return the height consumed
+     */
+    private float renderInfoRow(GuiGraphics g, float bx, float by, float w, int mouseX, int mouseY) {
+        float h = infoRowHeight();
+        if (h <= 0) {
+            return 0;
+        }
+        if (SodiumIntegration.isLoaded()) {
+            Fonts.drawScaled(g, sodiumLoaded, bx + Theme.px(4), by + Theme.px(5),
+                    0.85F, 0xFF4CD964, false);
+        } else {
+            Fonts.drawScaled(g, sodiumMissing, bx + Theme.px(4), by + Theme.px(4),
+                    0.8F, Theme.TEXT_SECONDARY, false);
+            Fonts.drawScaled(g, sodiumHint, bx + Theme.px(4), by + Theme.px(16), 0.8F,
+                    Theme.TEXT_SECONDARY, false);
+            boolean hover = mouseX >= bx && mouseX <= bx + w
+                    && mouseY >= by && mouseY < by + h;
+            Fonts.drawScaled(g, sodiumLink, bx + Theme.px(4), by + Theme.px(30), 0.8F,
+                    hover ? ColorUtil.lerp(Theme.accent(), 0xFFFFFFFF, 0.3F) : Theme.accent(),
+                    false);
+        }
+        return h;
     }
 
     @Override
@@ -145,24 +238,44 @@ public final class CategoryPanel extends Panel {
         float bx = getX() + Theme.px(10);
         float w = width() - Theme.px(20);
         float cy = getY() + headerHeight();
+
+        float infoH = infoRowHeight();
+        if (infoH > 0) {
+            if (my >= cy && my < cy + infoH) {
+                if (!SodiumIntegration.isLoaded()) {
+                    ClientSounds.click();
+                    SodiumIntegration.openModrinth();
+                }
+                return true;
+            }
+            cy += infoH;
+        }
+
         for (Module m : modules()) {
             float rh = moduleRowHeight();
             if (my >= cy && my < cy + rh) {
                 if (m.isToggleable() && mx >= bx + w - Theme.px(38)) {
                     m.toggle();
+                    ClientSounds.toggle(m.isEnabled());
+                    if (Theme.animationsEnabled()) {
+                        Animation glow = new Animation(1.0, 350, Easing.CUBIC_OUT);
+                        glow.animateTo(0.0);
+                        toggleGlow.put(m, glow);
+                    }
                 } else if (!settingsOf(m).isEmpty()) {
                     toggleExpanded(m);
+                    ClientSounds.click();
                 }
                 return true;
             }
             cy += rh;
-            if (EXPANDED.contains(m.getName())) {
-                float settingsH = rows.totalHeight(settingsOf(m));
-                if (my >= cy && my < cy + settingsH + Theme.px(6)) {
+            float sectionH = expandedHeight(m);
+            if (sectionH > 0) {
+                if (my >= cy && my < cy + sectionH) {
                     return rows.mouseClicked(mx, my, bx + Theme.px(8), cy + Theme.px(2),
                             w - Theme.px(16), settingsOf(m), button);
                 }
-                cy += settingsH + Theme.px(6);
+                cy += sectionH;
             }
         }
         return false;
