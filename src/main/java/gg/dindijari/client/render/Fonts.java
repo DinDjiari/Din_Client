@@ -113,6 +113,46 @@ public final class Fonts {
     }
 
     /**
+     * Indicates whether a component fits within a width when drawn at a scale.
+     *
+     * @param text          the component
+     * @param maxWidthUnits available width in GUI units
+     * @param scale         the draw scale
+     * @return {@code true} if the text fits without truncation
+     */
+    public static boolean fits(Component text, float maxWidthUnits, float scale) {
+        return width(text) * scale <= maxWidthUnits;
+    }
+
+    /**
+     * Returns the component truncated with a trailing ellipsis so it fits within
+     * the given width at the given scale, or the original component if it
+     * already fits. The truncated copy keeps the original style (font/colour).
+     *
+     * @param text          the component
+     * @param maxWidthUnits available width in GUI units
+     * @param scale         the draw scale
+     * @return the fitted component
+     */
+    public static Component fit(Component text, float maxWidthUnits, float scale) {
+        if (fits(text, maxWidthUnits, scale)) {
+            return text;
+        }
+        String full = text.getString();
+        var style = text.getStyle();
+        float ellipsis = width(Component.literal("…").withStyle(style)) * scale;
+        int len = full.length();
+        while (len > 0) {
+            float w = width(Component.literal(full.substring(0, len)).withStyle(style)) * scale;
+            if (w + ellipsis <= maxWidthUnits) {
+                break;
+            }
+            len--;
+        }
+        return Component.literal(full.substring(0, len).stripTrailing() + "…").withStyle(style);
+    }
+
+    /**
      * Draws a component at native size.
      *
      * @param g      the draw context

@@ -179,6 +179,34 @@ public final class Render2D {
         emitRadialFan(g, cx, cy, radius, inner, outer);
     }
 
+    /**
+     * Fills a single triangle (emitted as a degenerate GUI quad). Vertices may
+     * be given in any order; both windings are emitted so the triangle is
+     * visible regardless of the pipeline's cull state.
+     *
+     * @param g     the draw context
+     * @param x1    first vertex x
+     * @param y1    first vertex y
+     * @param x2    second vertex x
+     * @param y2    second vertex y
+     * @param x3    third vertex x
+     * @param y3    third vertex y
+     * @param color packed ARGB fill colour
+     */
+    public static void fillTriangle(GuiGraphics g, float x1, float y1, float x2, float y2,
+                                    float x3, float y3, int color) {
+        Matrix4f m = g.pose().last().pose();
+        VertexConsumer vc = g.bufferSource().getBuffer(RenderType.gui());
+        vc.addVertex(m, x1, y1, 0).setColor(color);
+        vc.addVertex(m, x2, y2, 0).setColor(color);
+        vc.addVertex(m, x3, y3, 0).setColor(color);
+        vc.addVertex(m, x3, y3, 0).setColor(color);
+        vc.addVertex(m, x1, y1, 0).setColor(color);
+        vc.addVertex(m, x3, y3, 0).setColor(color);
+        vc.addVertex(m, x2, y2, 0).setColor(color);
+        vc.addVertex(m, x2, y2, 0).setColor(color);
+    }
+
     // ------------------------------------------------------------------
     // Outlines and shadows
     // ------------------------------------------------------------------

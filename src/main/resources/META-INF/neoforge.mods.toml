@@ -27,3 +27,11 @@ type = "required"
 versionRange = "[${minecraft_version},1.22)"
 ordering = "NONE"
 side = "CLIENT"
+
+# Embeddium is the recommended (never bundled, never required) rendering
+# optimizer on NeoForge; the client runs fine without it.
+[[dependencies.dindijariclient]]
+modId = "embeddium"
+type = "optional"
+ordering = "NONE"
+side = "CLIENT"

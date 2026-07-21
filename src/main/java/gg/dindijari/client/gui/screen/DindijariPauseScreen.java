@@ -33,9 +33,10 @@ public final class DindijariPauseScreen extends ThemedScreen {
 
     private final Component header = Fonts.ui("Game Paused");
     // Real logged-in profile name — resolved at screen construction, never hardcoded.
-    private final Component footer = Fonts.ui(
-            net.minecraft.client.Minecraft.getInstance().getUser().getName()
-                    + " · dindijari client v" + gg.dindijari.client.core.DindijariClient.MOD_VERSION);
+    private final Component playerName = Fonts.ui(
+            net.minecraft.client.Minecraft.getInstance().getUser().getName());
+    private final Component versionLine = Fonts.ui(
+            "dindijari client v" + gg.dindijari.client.core.DindijariClient.MOD_VERSION);
 
     private int panelX;
     private int panelY;
@@ -96,8 +97,13 @@ public final class DindijariPauseScreen extends ThemedScreen {
         Fonts.drawCentered(g, header, panelX + panelW / 2.0F, panelY + pad + Theme.px(8),
                 1.25F, Theme.TEXT_PRIMARY, false);
 
+        // Footer, bottom-left: player name as larger primary white text with
+        // the version line as smaller secondary grey (#A0A0A8) underneath.
         float edge = Theme.px(Theme.GRID);
-        Fonts.draw(g, footer, edge, this.height - 9 - edge, Theme.TEXT_SECONDARY, false);
+        float versionY = this.height - edge - 9 * 0.75F;
+        float nameY = versionY - Theme.px(6) - 9 * 1.1F;
+        Fonts.drawScaled(g, playerName, edge, nameY, 1.1F, Theme.TEXT_PRIMARY, false);
+        Fonts.drawScaled(g, versionLine, edge, versionY, 0.75F, Theme.TEXT_SECONDARY, false);
     }
 
     @Override

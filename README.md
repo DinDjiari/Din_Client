@@ -64,3 +64,28 @@ src/main/java/gg/dindijari/client/
 ## License
 
 GPL-3.0-only. See [`LICENSE`](LICENSE).
+# Din_Client
+My own MC client 
+
+
+## Music
+
+On the **very first launch** (before any client config exists) the vanilla
+Music volume is set to 0. This happens exactly once — your later choice is
+never overwritten. Turn music back on with the **Music** switch in the Click
+GUI (Right-Shift → Client) or the vanilla Music & Sounds slider.
+
+## Recommended: Embeddium
+
+Sodium is Fabric-only; on NeoForge the equivalent rendering optimizer is
+[Embeddium](https://modrinth.com/mod/embeddium). The Dindijari Client
+**recommends** Embeddium but does **not** bundle or require it — install it
+yourself alongside this mod (it is declared as an optional dependency, and
+the client runs fine without it). When it is missing, a one-time toast on the
+main menu and an info row in the Performance panel point to it; both
+disappear once Embeddium is installed, and the toast can be disabled
+permanently via Click GUI → Client → Notifications.
+
+Honest note: the client's own Performance modules only reduce the client's UI
+overhead and batch-apply vanilla video settings — they are not a rendering
+engine rewrite and cannot match Embeddium's gains.

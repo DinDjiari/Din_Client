@@ -70,6 +70,10 @@ public final class ScreenManager {
     /** Armed when the themed title screen appears; consumed on the next tick. */
     private boolean devSettingsPending;
 
+    /** The Embeddium recommendation toast fires at most once per session. */
+    private boolean embeddiumToastShown;
+    private int titleTicks;
+
     /**
      * Subscribes all screen-related listeners to the game event bus. Call once
      * during mod construction.
@@ -194,16 +198,44 @@ public final class ScreenManager {
     private net.minecraft.network.chat.Component connectLine;
 
     private void onClientTick(ClientTickEvent.Post event) {
+        Minecraft minecraft = Minecraft.getInstance();
+
+        maybeShowEmbeddiumToast(minecraft);
+
         if (!devSettingsPending) {
             return;
         }
-        Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen instanceof DindijariTitleScreen title) {
             devSettingsPending = false;
             devSettingsShown = true;
             LOGGER.info("Dev environment detected — auto-opening Client Settings");
             minecraft.setScreen(new ClickGuiScreen(title));
         }
+    }
+
+    /**
+     * Opens the Embeddium recommendation dialog once per session, shortly
+     * (~1.5 s) after the main menu first appears — only when Embeddium is not
+     * installed and the persistent "Nicht mehr anzeigen" setting allows it.
+     */
+    private void maybeShowEmbeddiumToast(Minecraft minecraft) {
+        if (embeddiumToastShown || !(minecraft.screen instanceof DindijariTitleScreen title)) {
+            return;
+        }
+        if (++titleTicks < 30) {
+            return;
+        }
+        embeddiumToastShown = true;
+        if (net.neoforged.fml.ModList.get().isLoaded("embeddium")) {
+            return;
+        }
+        var notifications = (gg.dindijari.client.module.modules.qol.NotificationsModule)
+                gg.dindijari.client.core.Services.modules().getModule("Notifications");
+        if (notifications == null || !notifications.embeddiumHintEnabled()) {
+            return;
+        }
+        minecraft.setScreen(new gg.dindijari.client.gui.screen.EmbeddiumDialogScreen(
+                title, notifications));
     }
 
     private void onKey(InputEvent.Key event) {

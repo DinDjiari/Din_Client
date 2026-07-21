@@ -15,6 +15,8 @@ import gg.dindijari.client.module.modules.qol.AutoReconnectModule;
 import gg.dindijari.client.module.modules.qol.ChatTimestampsModule;
 import gg.dindijari.client.module.modules.qol.CoordsCopyModule;
 import gg.dindijari.client.module.modules.qol.FullbrightModule;
+import gg.dindijari.client.module.modules.qol.MusicModule;
+import gg.dindijari.client.module.modules.qol.NotificationsModule;
 import gg.dindijari.client.module.modules.qol.ServerIpHideModule;
 import gg.dindijari.client.module.modules.qol.ZoomModule;
 import gg.dindijari.client.render.Theme;
@@ -54,7 +56,7 @@ public final class DindijariClient {
     public static final String MOD_NAME = "Dindijari Client";
 
     /** The mod version shown in UI footers; kept in sync with gradle.properties. */
-    public static final String MOD_VERSION = "0.1.0";
+    public static final String MOD_VERSION = "1.6.0";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
@@ -73,6 +75,7 @@ public final class DindijariClient {
         ThemeModule themeModule = new ThemeModule();
         moduleManager.register(themeModule);
         Theme.install(themeModule);
+        moduleManager.register(new gg.dindijari.client.module.modules.BrandingModule());
 
         PerformanceModeModule performanceMode = new PerformanceModeModule();
         Theme.installPerformanceMode(performanceMode);
@@ -88,12 +91,23 @@ public final class DindijariClient {
                 new ChatTimestampsModule(),
                 new CoordsCopyModule(),
                 new ServerIpHideModule(),
-                new AutoReconnectModule());
+                new AutoReconnectModule(),
+                new MusicModule(),
+                new NotificationsModule());
 
         Path configRoot = FMLPaths.CONFIGDIR.get().resolve(MOD_ID);
+        // First launch = no config profile has ever been written.
+        boolean firstLaunch = !java.nio.file.Files.exists(
+                configRoot.resolve("profiles").resolve("default.json"));
         ConfigManager configManager = new ConfigManager(configRoot);
         configManager.bind(moduleManager.getModules());
         configManager.load();
+        if (firstLaunch) {
+            // Options are not available yet during mod construction; apply on
+            // the first client tick instead (exactly once).
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                    DindijariClient::muteMusicOnFirstTick);
+        }
 
         moduleManager.registerEvents();
         new ScreenManager().registerEvents();
@@ -103,5 +117,32 @@ public final class DindijariClient {
                 new Thread(configManager::shutdown, "dindijari-config-flush"));
 
         LOGGER.info("{} ready", MOD_NAME);
+    }
+
+    /** One-shot guard for the first-launch music mute. */
+    private static boolean musicMuteApplied;
+
+    /**
+     * Sets the vanilla Music volume to 0 exactly once — on the very first
+     * launch, before any config existed. Later launches never touch it; the
+     * "Music" module in the Click GUI (or the vanilla slider) turns it back
+     * on. Documented in the README. Runs on the first client tick because
+     * options are not yet constructed during mod loading.
+     *
+     * @param event the client tick
+     */
+    private static void muteMusicOnFirstTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (musicMuteApplied) {
+            return;
+        }
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        if (minecraft == null || minecraft.options == null) {
+            return;
+        }
+        musicMuteApplied = true;
+        minecraft.options.getSoundSourceOptionInstance(
+                net.minecraft.sounds.SoundSource.MUSIC).set(0.0);
+        minecraft.options.save();
+        LOGGER.info("First launch: vanilla music volume set to 0 (re-enable via the Music module)");
     }
 }

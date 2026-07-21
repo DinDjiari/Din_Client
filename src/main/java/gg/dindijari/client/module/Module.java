@@ -32,6 +32,7 @@ public abstract class Module {
 
     private boolean enabled;
     private boolean toggleable = true;
+    private boolean favorite;
 
     /**
      * Creates a new module with an unbound toggle keybind.
@@ -128,6 +129,28 @@ public abstract class Module {
      */
     public final void toggle() {
         setEnabled(!enabled);
+    }
+
+    /**
+     * Indicates whether the user has starred this module as a favorite.
+     *
+     * @return {@code true} if favorited
+     */
+    public final boolean isFavorite() {
+        return favorite;
+    }
+
+    /**
+     * Sets the favorite (starred) state, notifying change listeners so the
+     * config autosaves.
+     *
+     * @param favorite the desired state
+     */
+    public final void setFavorite(boolean favorite) {
+        if (this.favorite != favorite) {
+            this.favorite = favorite;
+            fireChanged();
+        }
     }
 
     /**
